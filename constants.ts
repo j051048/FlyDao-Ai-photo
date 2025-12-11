@@ -31,6 +31,10 @@ export const TRANSLATIONS: Record<string, Translation> = {
         errorTooLarge: "图片太大了 (>8MB) 🍬",
         errorNoKey: "请先去设置配置 API Key 🔑",
         errorGenFailed: "生成失败了 🥲",
+        testConnection: "测试连接",
+        testing: "连接测试中...",
+        testSuccess: "连接成功！API 有效 ✅",
+        testFailed: "连接失败: ",
     },
     en: {
         appTitle: "AI Photo Booth",
@@ -62,6 +66,10 @@ export const TRANSLATIONS: Record<string, Translation> = {
         errorTooLarge: "Image too large (>8MB) 🍬",
         errorNoKey: "Please configure API Key first 🔑",
         errorGenFailed: "Generation failed 🥲",
+        testConnection: "Test Connection",
+        testing: "Testing...",
+        testSuccess: "Connection Verified ✅",
+        testFailed: "Connection Failed: ",
     }
 };
 

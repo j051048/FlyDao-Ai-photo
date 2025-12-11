@@ -12,6 +12,8 @@ const getStorageItem = (key: string) => {
     return null;
 };
 
+const DEFAULT_BASE_URL = 'https://vip.apiyi.com/';
+
 const AIPhotoStudio = () => {
     // State
     const [currentTheme, setCurrentTheme] = useState<string>('banana');
@@ -26,11 +28,15 @@ const AIPhotoStudio = () => {
     // Settings State
     const [config, setConfig] = useState<Config>({
         provider: (getStorageItem('api_provider') as 'official' | 'thirdparty') || 'official',
-        baseUrl: getStorageItem('api_base_url') || '',
+        baseUrl: getStorageItem('api_base_url') || DEFAULT_BASE_URL,
         apiKey: getStorageItem('api_key') || '',
         model: getStorageItem('api_model') || 'gemini-2.5-flash-image'
     });
     const [showSettings, setShowSettings] = useState<boolean>(false);
+    
+    // Testing Connection State
+    const [isTesting, setIsTesting] = useState(false);
+    const [testResult, setTestResult] = useState<{success: boolean, message: string} | null>(null);
     
     const fileInputRef = useRef<HTMLInputElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
@@ -113,6 +119,53 @@ const AIPhotoStudio = () => {
             if (urlMatch) return urlMatch[1] || urlMatch[0];
             
             throw new Error(t('errorGenFailed'));
+        }
+    };
+
+    const handleTestConnection = async () => {
+        if (!config.apiKey) {
+            setTestResult({ success: false, message: lang === 'zh' ? '请先填写 API Key' : 'Please enter API Key' });
+            return;
+        }
+        
+        setIsTesting(true);
+        setTestResult(null);
+
+        try {
+            let baseUrl = config.baseUrl.replace(/\/$/, '');
+            let endpoint = baseUrl.includes('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
+            if (!baseUrl.includes('/v1') && !baseUrl.includes('/chat')) endpoint = `${baseUrl}/v1/chat/completions`; 
+
+            // Lightweight test payload
+            const payload = {
+                model: config.model,
+                messages: [{ role: "user", content: "Hello" }],
+                max_tokens: 5
+            };
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${config.apiKey}` 
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                setTestResult({ success: true, message: t('testSuccess') });
+            } else {
+                let errorMsg = res.statusText;
+                try {
+                    const errData = await res.json();
+                    if (errData.error?.message) errorMsg = errData.error.message;
+                } catch(e) {}
+                setTestResult({ success: false, message: t('testFailed') + errorMsg });
+            }
+        } catch (e: any) {
+             setTestResult({ success: false, message: t('testFailed') + e.message });
+        } finally {
+            setIsTesting(false);
         }
     };
 
@@ -478,6 +531,27 @@ const AIPhotoStudio = () => {
                                             onBlur={(e) => e.target.value && setConfig({...config, model: e.target.value})}
                                         />
                                     )}
+
+                                    {/* Test Connection UI */}
+                                    <div className="pt-2">
+                                        <button 
+                                            onClick={handleTestConnection}
+                                            disabled={isTesting}
+                                            className="w-full py-2 rounded-xl text-sm font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 border-2 border-stone-200 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            {isTesting ? (
+                                                <><div className="w-4 h-4 border-2 border-stone-400 border-t-transparent rounded-full animate-spin"/> {t('testing')}</>
+                                            ) : (
+                                                <><Icons.Globe className="w-4 h-4"/> {t('testConnection')}</>
+                                            )}
+                                        </button>
+                                        
+                                        {testResult && (
+                                            <div className={`mt-2 p-2 rounded-lg text-xs font-bold text-center ${testResult.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {testResult.message}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 

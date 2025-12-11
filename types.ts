@@ -66,4 +66,8 @@ export interface Translation {
     errorTooLarge: string;
     errorNoKey: string;
     errorGenFailed: string;
+    testConnection: string;
+    testing: string;
+    testSuccess: string;
+    testFailed: string;
 }

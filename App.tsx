@@ -1,8 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Theme, ResultItem, Config, AppLanguage, GenerationMode } from './types';
 import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
 import { generateImageWithGemini } from './services/geminiService';
+
+// Helper for safe storage access
+const getStorageItem = (key: string) => {
+    if (typeof localStorage !== 'undefined') {
+        return localStorage.getItem(key);
+    }
+    return null;
+};
 
 const AIPhotoStudio = () => {
     // State
@@ -17,10 +25,10 @@ const AIPhotoStudio = () => {
     
     // Settings State
     const [config, setConfig] = useState<Config>({
-        provider: (localStorage.getItem('api_provider') as 'official' | 'thirdparty') || 'official',
-        baseUrl: localStorage.getItem('api_base_url') || '',
-        apiKey: localStorage.getItem('api_key') || '',
-        model: localStorage.getItem('api_model') || 'gemini-2.5-flash-image'
+        provider: (getStorageItem('api_provider') as 'official' | 'thirdparty') || 'official',
+        baseUrl: getStorageItem('api_base_url') || '',
+        apiKey: getStorageItem('api_key') || '',
+        model: getStorageItem('api_model') || 'gemini-2.5-flash-image'
     });
     const [showSettings, setShowSettings] = useState<boolean>(false);
     
@@ -32,10 +40,12 @@ const AIPhotoStudio = () => {
 
     const saveConfig = (newConfig: Config) => {
         setConfig(newConfig);
-        localStorage.setItem('api_provider', newConfig.provider);
-        localStorage.setItem('api_base_url', newConfig.baseUrl);
-        localStorage.setItem('api_key', newConfig.apiKey);
-        localStorage.setItem('api_model', newConfig.model);
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('api_provider', newConfig.provider);
+            localStorage.setItem('api_base_url', newConfig.baseUrl);
+            localStorage.setItem('api_key', newConfig.apiKey);
+            localStorage.setItem('api_model', newConfig.model);
+        }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

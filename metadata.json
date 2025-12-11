@@ -1,0 +1,5 @@
+{
+  "name": "AI Photo Booth - Nano Banana",
+  "description": "A stylish, mobile-first AI photo generator featuring the Nano Banana aesthetic. Upload a selfie and transform it into various styles using Gemini 2.5 Flash.",
+  "requestFramePermissions": []
+}

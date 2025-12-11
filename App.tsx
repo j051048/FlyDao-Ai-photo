@@ -88,9 +88,19 @@ const AIPhotoStudio = () => {
         } else {
             // Third Party / Proxy Implementation (Fetch)
             if (!config.apiKey) throw new Error(t('errorNoKey'));
-            let baseUrl = config.baseUrl.replace(/\/$/, '');
-            let endpoint = baseUrl.includes('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
-            if (!baseUrl.includes('/v1') && !baseUrl.includes('/chat')) endpoint = `${baseUrl}/v1/chat/completions`; 
+            
+            // Safer URL construction
+            let baseUrl = config.baseUrl.trim().replace(/\/$/, '');
+            let endpoint = '';
+
+            // Handle standard OneAPI / OpenAI paths
+            if (baseUrl.includes('/chat/completions')) {
+                endpoint = baseUrl;
+            } else if (baseUrl.endsWith('/v1')) {
+                endpoint = `${baseUrl}/chat/completions`;
+            } else {
+                endpoint = `${baseUrl}/v1/chat/completions`;
+            }
 
             const payload = {
                 model: config.model,
@@ -101,7 +111,8 @@ const AIPhotoStudio = () => {
                         { type: "image_url", image_url: { url: sourceImg } }
                     ]
                 }],
-                stream: false
+                stream: false,
+                max_tokens: 4096 // Critical for some vision models wrapped as chat
             };
             
             const res = await fetch(endpoint, {
@@ -110,7 +121,14 @@ const AIPhotoStudio = () => {
                 body: JSON.stringify(payload)
             });
             
-            if (!res.ok) throw new Error(t('errorGenFailed'));
+            if (!res.ok) {
+                let errorMsg = t('errorGenFailed');
+                try {
+                   const errData = await res.json();
+                   if (errData.error?.message) errorMsg = errData.error.message;
+                } catch(e) {}
+                throw new Error(errorMsg);
+            }
             const data = await res.json();
             
             if (data.data && data.data[0] && data.data[0].url) return data.data[0].url;
@@ -132,35 +150,65 @@ const AIPhotoStudio = () => {
         setTestResult(null);
 
         try {
-            let baseUrl = config.baseUrl.replace(/\/$/, '');
-            let endpoint = baseUrl.includes('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
-            if (!baseUrl.includes('/v1') && !baseUrl.includes('/chat')) endpoint = `${baseUrl}/v1/chat/completions`; 
+            // Normalize Base URL
+            let baseUrl = config.baseUrl.trim().replace(/\/$/, '');
+            // We want to test /models endpoint first as it's the standard non-charging check
+            let modelsEndpoint = '';
+            
+            if (baseUrl.endsWith('/v1')) {
+                modelsEndpoint = `${baseUrl}/models`;
+            } else if (baseUrl.includes('/chat/completions')) {
+                modelsEndpoint = baseUrl.replace('/chat/completions', '/models');
+            } else {
+                modelsEndpoint = `${baseUrl}/v1/models`;
+            }
 
-            // Lightweight test payload
-            const payload = {
-                model: config.model,
-                messages: [{ role: "user", content: "Hello" }],
-                max_tokens: 5
-            };
-
-            const res = await fetch(endpoint, {
-                method: 'POST',
+            // Attempt 1: Check Models List
+            const res = await fetch(modelsEndpoint, {
+                method: 'GET',
                 headers: { 
-                    'Content-Type': 'application/json', 
                     'Authorization': `Bearer ${config.apiKey}` 
-                },
-                body: JSON.stringify(payload)
+                }
             });
 
             if (res.ok) {
                 setTestResult({ success: true, message: t('testSuccess') });
             } else {
-                let errorMsg = res.statusText;
-                try {
-                    const errData = await res.json();
-                    if (errData.error?.message) errorMsg = errData.error.message;
-                } catch(e) {}
-                setTestResult({ success: false, message: t('testFailed') + errorMsg });
+                // Attempt 2: If /models fails (some proxies block it), try a lightweight chat completion
+                // IMPORTANT: We use 'gpt-3.5-turbo' for this test because
+                // selecting an image model (like Midjourney) for a text "Hello" ping will fail.
+                let chatEndpoint = '';
+                if (baseUrl.includes('/chat/completions')) chatEndpoint = baseUrl;
+                else if (baseUrl.endsWith('/v1')) chatEndpoint = `${baseUrl}/chat/completions`;
+                else chatEndpoint = `${baseUrl}/v1/chat/completions`;
+
+                const fallbackPayload = {
+                    model: 'gpt-3.5-turbo', // Safe fallback model for connectivity check
+                    messages: [{ role: "user", content: "Hi" }],
+                    max_tokens: 1
+                };
+
+                const fallbackRes = await fetch(chatEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+                    body: JSON.stringify(fallbackPayload)
+                });
+
+                if (fallbackRes.ok) {
+                    setTestResult({ success: true, message: t('testSuccess') });
+                } else {
+                    let errorMsg = res.statusText; // use original error
+                    try {
+                        const errData = await res.json(); // try to parse original error
+                        if (errData.error?.message) errorMsg = errData.error.message;
+                        else {
+                             // try fallback error
+                             const fbData = await fallbackRes.json();
+                             if (fbData.error?.message) errorMsg = fbData.error.message;
+                        }
+                    } catch(e) {}
+                    setTestResult({ success: false, message: t('testFailed') + errorMsg });
+                }
             }
         } catch (e: any) {
              setTestResult({ success: false, message: t('testFailed') + e.message });
@@ -526,7 +574,7 @@ const AIPhotoStudio = () => {
                                     {config.model === 'custom' && (
                                         <input 
                                             type="text" 
-                                            placeholder="Enter Model ID..."
+                                            placeholder="Enter Model ID (e.g. midjourney-fast)..."
                                             className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm mt-2"
                                             onBlur={(e) => e.target.value && setConfig({...config, model: e.target.value})}
                                         />

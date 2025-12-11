@@ -74,15 +74,9 @@ export const TRANSLATIONS: Record<string, Translation> = {
 };
 
 export const MODEL_OPTIONS = [
-    { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash (Google Default)' },
-    { value: 'nano-banana-pro', label: 'nano banana pro (Ultra Realism)' },
-    { value: 'nano-banana', label: 'Nano Banana (Theme Style)' },
-    { value: 'midjourney', label: 'Midjourney (Artistic)' },
-    { value: 'ideogram', label: 'Ideogram (Typography/Art)' },
-    { value: 'recraft-v3', label: 'Recraft V3 (Vector/Design)' },
-    { value: 'gpt-4o-all', label: 'GPT-4o All (Versatile)' },
-    { value: 'luma', label: 'Luma (High Fidelity)' },
-    { value: 'flux-dev', label: 'FLUX Dev (Balanced)' },
+    { value: 'nano-banana', label: 'Nano Banana' },
+    { value: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (Nano Banana Pro)' },
+    { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash' },
 ];
 
 export const THEMES: Record<string, Theme> = {

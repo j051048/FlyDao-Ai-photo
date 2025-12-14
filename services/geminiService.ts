@@ -3,11 +3,10 @@ import { GoogleGenAI } from "@google/genai";
 export const generateImageWithGemini = async (prompt: string, imageBase64: string): Promise<string> => {
     // Note: The API key must be available in process.env.API_KEY
     // We add a safety check for 'process' to prevent browser ReferenceErrors if the build environment didn't polyfill it.
-    const apiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : undefined;
-
-    if (!apiKey) {
-        throw new Error("System API Key is missing. Please configure process.env.API_KEY or use Third Party Provider in settings.");
-    }
+    // If process.env.API_KEY is missing, we use a dummy key '123456789' to ensure the SDK initializes
+    // without throwing a client-side error. This is useful if a proxy handles the actual auth downstream.
+    const envKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : undefined;
+    const apiKey = envKey || '123456789';
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
     

@@ -12,7 +12,7 @@ const getStorageItem = (key: string) => {
     return null;
 };
 
-const DEFAULT_BASE_URL = 'https://vip.apiyi.com/';
+const DEFAULT_BASE_URL = 'https://proxy.flydao.top/v1';
 
 const AIPhotoStudio = () => {
     // State
@@ -28,7 +28,7 @@ const AIPhotoStudio = () => {
     // Settings State
     const [config, setConfig] = useState<Config>({
         provider: (getStorageItem('api_provider') as 'official' | 'thirdparty') || 'official',
-        baseUrl: getStorageItem('api_base_url') || DEFAULT_BASE_URL,
+        baseUrl: DEFAULT_BASE_URL, // Force new default, ignoring storage to ensure update
         apiKey: getStorageItem('api_key') || '',
         model: getStorageItem('api_model') || 'gemini-2.5-flash-image'
     });
@@ -48,7 +48,7 @@ const AIPhotoStudio = () => {
         setConfig(newConfig);
         if (typeof localStorage !== 'undefined') {
             localStorage.setItem('api_provider', newConfig.provider);
-            localStorage.setItem('api_base_url', newConfig.baseUrl);
+            // localStorage.setItem('api_base_url', newConfig.baseUrl); // Disable saving base URL to enforce default
             localStorage.setItem('api_key', newConfig.apiKey);
             localStorage.setItem('api_model', newConfig.model);
         }
@@ -541,13 +541,7 @@ const AIPhotoStudio = () => {
                             ) : (
                                 <div className="space-y-3">
                                     <label className="text-xs font-bold uppercase text-stone-400 ml-2">Config</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder={t('baseUrlPlaceholder')}
-                                        value={config.baseUrl} 
-                                        onChange={e => setConfig({...config, baseUrl: e.target.value})}
-                                        className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm"
-                                    />
+                                    {/* Hidden Base URL Input - defaulted to proxy.flydao.top */}
                                     <input 
                                         type="password" 
                                         placeholder={t('apiKeyPlaceholder')}

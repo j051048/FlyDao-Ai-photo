@@ -27,7 +27,8 @@ const AIPhotoStudio = () => {
     
     // Settings State
     const [config, setConfig] = useState<Config>({
-        provider: (getStorageItem('api_provider') as 'official' | 'thirdparty') || 'official',
+        // Force provider to thirdparty, ignoring previous official setting
+        provider: 'thirdparty',
         // Allow loading from storage, fallback to default if empty
         baseUrl: getStorageItem('api_base_url') || DEFAULT_BASE_URL,
         apiKey: getStorageItem('api_key') || '123456789',
@@ -48,7 +49,7 @@ const AIPhotoStudio = () => {
     const saveConfig = (newConfig: Config) => {
         setConfig(newConfig);
         if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('api_provider', newConfig.provider);
+            localStorage.setItem('api_provider', 'thirdparty'); // Always save as thirdparty
             localStorage.setItem('api_base_url', newConfig.baseUrl); 
             localStorage.setItem('api_key', newConfig.apiKey);
             localStorage.setItem('api_model', newConfig.model);
@@ -75,7 +76,7 @@ const AIPhotoStudio = () => {
     };
 
     const generateImageAPI = async (prompt: string, sourceImg: string): Promise<string> => {
-        const provider = config.provider;
+        // Always use 'thirdparty' logic effectively since we removed the toggle
         
         let finalPrompt = prompt;
         // Check if we need to append constraint
@@ -83,62 +84,57 @@ const AIPhotoStudio = () => {
             finalPrompt += " \n\n[IDENTITY CONSTRAINT]: Strictly maintain the facial identity, bone structure, and features of the person in the provided image. High fidelity face preservation.";
         }
 
-        if (provider === 'official') {
-            // Use Gemini SDK
-            return await generateImageWithGemini(finalPrompt, sourceImg);
+        // Third Party / Proxy Implementation (Fetch)
+        if (!config.apiKey) throw new Error(t('errorNoKey'));
+        
+        // Safer URL construction
+        let baseUrl = config.baseUrl.trim().replace(/\/$/, '');
+        let endpoint = '';
+
+        // Handle standard OneAPI / OpenAI paths
+        if (baseUrl.includes('/chat/completions')) {
+            endpoint = baseUrl;
+        } else if (baseUrl.endsWith('/v1')) {
+            endpoint = `${baseUrl}/chat/completions`;
         } else {
-            // Third Party / Proxy Implementation (Fetch)
-            if (!config.apiKey) throw new Error(t('errorNoKey'));
-            
-            // Safer URL construction
-            let baseUrl = config.baseUrl.trim().replace(/\/$/, '');
-            let endpoint = '';
-
-            // Handle standard OneAPI / OpenAI paths
-            if (baseUrl.includes('/chat/completions')) {
-                endpoint = baseUrl;
-            } else if (baseUrl.endsWith('/v1')) {
-                endpoint = `${baseUrl}/chat/completions`;
-            } else {
-                endpoint = `${baseUrl}/v1/chat/completions`;
-            }
-
-            const payload = {
-                model: config.model,
-                messages: [{
-                    role: "user",
-                    content: [
-                        { type: "text", text: finalPrompt },
-                        { type: "image_url", image_url: { url: sourceImg } }
-                    ]
-                }],
-                stream: false,
-                max_tokens: 4096 // Critical for some vision models wrapped as chat
-            };
-            
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!res.ok) {
-                let errorMsg = t('errorGenFailed');
-                try {
-                   const errData = await res.json();
-                   if (errData.error?.message) errorMsg = errData.error.message;
-                } catch(e) {}
-                throw new Error(errorMsg);
-            }
-            const data = await res.json();
-            
-            if (data.data && data.data[0] && data.data[0].url) return data.data[0].url;
-            const content = data.choices?.[0]?.message?.content || "";
-            const urlMatch = content.match(/https?:\/\/[^\s"']+\.(png|jpg|jpeg|webp)/i) || content.match(/\!\[.*?\]\((.*?)\)/);
-            if (urlMatch) return urlMatch[1] || urlMatch[0];
-            
-            throw new Error(t('errorGenFailed'));
+            endpoint = `${baseUrl}/v1/chat/completions`;
         }
+
+        const payload = {
+            model: config.model,
+            messages: [{
+                role: "user",
+                content: [
+                    { type: "text", text: finalPrompt },
+                    { type: "image_url", image_url: { url: sourceImg } }
+                ]
+            }],
+            stream: false,
+            max_tokens: 4096 // Critical for some vision models wrapped as chat
+        };
+        
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+            let errorMsg = t('errorGenFailed');
+            try {
+               const errData = await res.json();
+               if (errData.error?.message) errorMsg = errData.error.message;
+            } catch(e) {}
+            throw new Error(errorMsg);
+        }
+        const data = await res.json();
+        
+        if (data.data && data.data[0] && data.data[0].url) return data.data[0].url;
+        const content = data.choices?.[0]?.message?.content || "";
+        const urlMatch = content.match(/https?:\/\/[^\s"']+\.(png|jpg|jpeg|webp)/i) || content.match(/\!\[.*?\]\((.*?)\)/);
+        if (urlMatch) return urlMatch[1] || urlMatch[0];
+        
+        throw new Error(t('errorGenFailed'));
     };
 
     const handleTestConnection = async () => {
@@ -527,85 +523,72 @@ const AIPhotoStudio = () => {
                         </div>
                         
                         <div className="p-6 space-y-4">
-                            {/* Provider Toggle */}
-                            <label className="text-xs font-bold uppercase text-stone-400 ml-1">{t('provider')}</label>
-                            <div className="flex bg-stone-100 p-1 rounded-xl">
-                                <button onClick={() => setConfig({...config, provider: 'official'})} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${config.provider === 'official' ? 'bg-white shadow-sm text-black' : 'text-stone-400'}`}>{t('official')}</button>
-                                <button onClick={() => setConfig({...config, provider: 'thirdparty'})} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${config.provider === 'thirdparty' ? 'bg-white shadow-sm text-black' : 'text-stone-400'}`}>{t('thirdParty')}</button>
-                            </div>
+                            {/* Inputs directly, no provider toggle */}
+                            <div className="space-y-3">
+                                <label className="text-xs font-bold uppercase text-stone-400 ml-2">Config</label>
+                                
+                                {/* Base URL Input - defaulted to proxy.flydao.top but editable */}
+                                <input 
+                                    type="text" 
+                                    placeholder={t('baseUrlPlaceholder')}
+                                    value={config.baseUrl} 
+                                    onChange={e => setConfig({...config, baseUrl: e.target.value})}
+                                    className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm"
+                                />
 
-                            {config.provider === 'official' ? (
-                                <div className="space-y-2 p-4 bg-stone-50 rounded-xl text-center">
-                                   <p className="text-sm text-stone-600 font-medium">Using System Environment API Key</p>
-                                   <p className="text-xs text-stone-400">Gemini 2.5 Flash / 3.0 Pro</p>
+                                <input 
+                                    type="password" 
+                                    placeholder={t('apiKeyPlaceholder')}
+                                    value={config.apiKey} 
+                                    onChange={e => setConfig({...config, apiKey: e.target.value})}
+                                    className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm"
+                                />
+                                
+                                <label className="text-xs font-bold uppercase text-stone-400 ml-2">{t('model')}</label>
+                                <div className="relative">
+                                    <select 
+                                        value={config.model}
+                                        onChange={(e) => setConfig({...config, model: e.target.value})}
+                                        className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm appearance-none focus:outline-none"
+                                    >
+                                        {MODEL_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                        <option value="custom">Custom (Type manually...)</option>
+                                    </select>
+                                    <div className="absolute right-4 top-4 pointer-events-none opacity-50">▼</div>
                                 </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    <label className="text-xs font-bold uppercase text-stone-400 ml-2">Config</label>
-                                    
-                                    {/* Base URL Input - defaulted to proxy.flydao.top but editable */}
+                                {/* Fallback for custom model typing */}
+                                {config.model === 'custom' && (
                                     <input 
                                         type="text" 
-                                        placeholder={t('baseUrlPlaceholder')}
-                                        value={config.baseUrl} 
-                                        onChange={e => setConfig({...config, baseUrl: e.target.value})}
-                                        className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm"
+                                        placeholder="Enter Model ID (e.g. midjourney-fast)..."
+                                        className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm mt-2"
+                                        onBlur={(e) => e.target.value && setConfig({...config, model: e.target.value})}
                                     />
+                                )}
 
-                                    <input 
-                                        type="password" 
-                                        placeholder={t('apiKeyPlaceholder')}
-                                        value={config.apiKey} 
-                                        onChange={e => setConfig({...config, apiKey: e.target.value})}
-                                        className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm"
-                                    />
-                                    
-                                    <label className="text-xs font-bold uppercase text-stone-400 ml-2">{t('model')}</label>
-                                    <div className="relative">
-                                        <select 
-                                            value={config.model}
-                                            onChange={(e) => setConfig({...config, model: e.target.value})}
-                                            className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm appearance-none focus:outline-none"
-                                        >
-                                            {MODEL_OPTIONS.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                            <option value="custom">Custom (Type manually...)</option>
-                                        </select>
-                                        <div className="absolute right-4 top-4 pointer-events-none opacity-50">▼</div>
-                                    </div>
-                                    {/* Fallback for custom model typing */}
-                                    {config.model === 'custom' && (
-                                        <input 
-                                            type="text" 
-                                            placeholder="Enter Model ID (e.g. midjourney-fast)..."
-                                            className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm mt-2"
-                                            onBlur={(e) => e.target.value && setConfig({...config, model: e.target.value})}
-                                        />
-                                    )}
-
-                                    {/* Test Connection UI */}
-                                    <div className="pt-2">
-                                        <button 
-                                            onClick={handleTestConnection}
-                                            disabled={isTesting}
-                                            className="w-full py-2 rounded-xl text-sm font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 border-2 border-stone-200 transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            {isTesting ? (
-                                                <><div className="w-4 h-4 border-2 border-stone-400 border-t-transparent rounded-full animate-spin"/> {t('testing')}</>
-                                            ) : (
-                                                <><Icons.Globe className="w-4 h-4"/> {t('testConnection')}</>
-                                            )}
-                                        </button>
-                                        
-                                        {testResult && (
-                                            <div className={`mt-2 p-2 rounded-lg text-xs font-bold text-center ${testResult.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                {testResult.message}
-                                            </div>
+                                {/* Test Connection UI */}
+                                <div className="pt-2">
+                                    <button 
+                                        onClick={handleTestConnection}
+                                        disabled={isTesting}
+                                        className="w-full py-2 rounded-xl text-sm font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 border-2 border-stone-200 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {isTesting ? (
+                                            <><div className="w-4 h-4 border-2 border-stone-400 border-t-transparent rounded-full animate-spin"/> {t('testing')}</>
+                                        ) : (
+                                            <><Icons.Globe className="w-4 h-4"/> {t('testConnection')}</>
                                         )}
-                                    </div>
+                                    </button>
+                                    
+                                    {testResult && (
+                                        <div className={`mt-2 p-2 rounded-lg text-xs font-bold text-center ${testResult.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            {testResult.message}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
 
                             <button 
                                 onClick={() => {saveConfig(config); setShowSettings(false);}}

@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Theme, ResultItem, Config, AppLanguage, GenerationMode } from './types';
 import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
-import { generateImageWithGemini } from './services/geminiService';
+import { generateImageWithGemini, testGeminiConnection } from './services/geminiService';
 import { ProfilePage } from './components/ProfilePage';
 
 // --- Global UI Components ---
@@ -214,14 +214,56 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const [results, setResults] = useState<ResultItem[]>([]);
     const [error, setError] = useState<string>('');
     const [showSettings, setShowSettings] = useState<boolean>(false);
+    
+    // Config State (LocalStorage persistence handled via useState initializers or effects)
     const [model, setModel] = useState<string>(localStorage.getItem('api_model') || 'gemini-2.5-flash-image');
+    const [apiKey, setApiKey] = useState<string>(localStorage.getItem('custom_api_key') || '123456');
+    const [baseUrl, setBaseUrl] = useState<string>(localStorage.getItem('custom_base_url') || 'https://proxy.flydao.top');
+    
+    // Testing State
+    const [isTesting, setIsTesting] = useState(false);
+    const [testLogs, setTestLogs] = useState<string[]>([]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
+    const logsEndRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     
     const theme = THEMES[currentTheme] || THEMES.banana;
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS[lang][key];
+
+    // Scroll logs to bottom
+    useEffect(() => {
+        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [testLogs]);
+
+    const handleSaveSettings = () => {
+        localStorage.setItem('api_model', model);
+        localStorage.setItem('custom_api_key', apiKey);
+        localStorage.setItem('custom_base_url', baseUrl);
+        setShowSettings(false);
+    };
+
+    const handleTestConnection = async () => {
+        setIsTesting(true);
+        setTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Starting test...`]);
+        setTestLogs(prev => [...prev, `> Model: ${model}`]);
+        setTestLogs(prev => [...prev, `> Base URL: ${baseUrl}`]);
+        
+        try {
+            const config = { apiKey, baseUrl };
+            const result = await testGeminiConnection(config, model);
+            setTestLogs(prev => [...prev, `✅ SUCCESS: ${result}`]);
+        } catch (err: any) {
+            console.error(err);
+            setTestLogs(prev => [...prev, `❌ ERROR: ${err.message}`]);
+            if (err.cause) {
+                 setTestLogs(prev => [...prev, `Caused by: ${JSON.stringify(err.cause)}`]);
+            }
+        } finally {
+            setIsTesting(false);
+        }
+    };
 
     const handleLogout = async () => {
         try {
@@ -260,15 +302,31 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
         setResults(itemsToGen);
         setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
 
+        const config = { apiKey, baseUrl };
+
         await Promise.all(itemsToGen.map(async (item) => {
             try {
-                // Handle key selection for pro model
-                if (model === 'gemini-3-pro-image-preview') {
-                    if (!(await (window as any).aistudio?.hasSelectedApiKey())) {
-                        await (window as any).aistudio?.openSelectKey();
-                    }
+                // Handle key selection for pro model (if not using custom proxy)
+                // If using custom proxy/key, we assume the user has access.
+                // Keeping logic: if user explicitly selects the "pro" model which usually requires oauth, 
+                // but has a custom key set, we might skip the oauth prompt? 
+                // For safety, if it's the exact Pro string and NO custom key is provided, we use the old flow.
+                // But here we rely on the custom key.
+                
+                if (model === 'gemini-3-pro-image-preview' && apiKey === '123456') {
+                     // If default dummy key, maybe trigger the OAuth flow? 
+                     // For now, let's just pass the config. The service will use the key provided.
+                     // If it fails, it fails.
+                     if (!(await (window as any).aistudio?.hasSelectedApiKey())) {
+                         try {
+                             await (window as any).aistudio?.openSelectKey();
+                         } catch (e) {
+                             // Ignore if not in that environment
+                         }
+                     }
                 }
-                const url = await generateImageWithGemini(item.prompt, sourceImage, model);
+
+                const url = await generateImageWithGemini(item.prompt, sourceImage, model, config);
                 setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'success', imageUrl: url } : r));
             } catch (e: any) {
                 console.error(e);
@@ -354,15 +412,81 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
 
             {showSettings && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-md p-4 animate-fade-in">
-                    <div className="bg-white w-full max-w-md rounded-[2rem] p-6 space-y-4 shadow-2xl">
-                        <div className="flex justify-between items-center"><h3 className="font-bold text-lg">Settings ⚙️</h3><button onClick={() => setShowSettings(false)} className="p-2 bg-stone-100 rounded-full"><Icons.X className="w-5 h-5"/></button></div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-stone-400 uppercase px-1">Selected Model</label>
-                            <select value={model} onChange={e => { setModel(e.target.value); localStorage.setItem('api_model', e.target.value); }} className="w-full p-4 rounded-xl bg-stone-50 border-2 border-stone-100 font-bold focus:outline-none focus:border-yellow-400">
-                                {MODEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                            </select>
+                    <div className="bg-white w-full max-w-md rounded-[2rem] p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-bold text-lg">{t('settings')} ⚙️</h3>
+                            <button onClick={() => setShowSettings(false)} className="p-2 bg-stone-100 rounded-full"><Icons.X className="w-5 h-5"/></button>
                         </div>
-                        <button onClick={() => setShowSettings(false)} className={`w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r ${theme.gradient} shadow-lg active:scale-95`}>保存配置</button>
+                        
+                        <div className="space-y-4">
+                            {/* Model Selection */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-stone-400 uppercase px-1">Selected Model</label>
+                                <select 
+                                    value={model} 
+                                    onChange={e => setModel(e.target.value)} 
+                                    className="w-full p-4 rounded-xl bg-stone-50 border-2 border-stone-100 font-bold focus:outline-none focus:border-yellow-400 transition-colors"
+                                >
+                                    {MODEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                </select>
+                            </div>
+
+                            {/* Base URL */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-stone-400 uppercase px-1">Base URL</label>
+                                <input 
+                                    type="text"
+                                    value={baseUrl}
+                                    onChange={e => setBaseUrl(e.target.value)}
+                                    placeholder={t('baseUrlPlaceholder')}
+                                    className="w-full p-4 rounded-xl bg-stone-50 border-2 border-stone-100 font-medium text-sm focus:outline-none focus:border-yellow-400 transition-colors"
+                                />
+                            </div>
+
+                            {/* API Key */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-stone-400 uppercase px-1">API Key</label>
+                                <input 
+                                    type="password"
+                                    value={apiKey}
+                                    onChange={e => setApiKey(e.target.value)}
+                                    placeholder={t('apiKeyPlaceholder')}
+                                    className="w-full p-4 rounded-xl bg-stone-50 border-2 border-stone-100 font-medium text-sm focus:outline-none focus:border-yellow-400 transition-colors"
+                                />
+                            </div>
+
+                            {/* Test Connection Button */}
+                            <button 
+                                onClick={handleTestConnection}
+                                disabled={isTesting}
+                                className="w-full py-3 rounded-xl font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 border-2 border-transparent hover:border-stone-300 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {isTesting ? (
+                                    <><div className="w-4 h-4 border-2 border-stone-600 border-t-transparent rounded-full animate-spin"/> {t('testing')}</>
+                                ) : (
+                                    <>{t('testConnection')}</>
+                                )}
+                            </button>
+
+                            {/* Logs Area */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-stone-400 uppercase px-1">Connection Logs</label>
+                                <div className="w-full h-32 bg-stone-900 rounded-xl p-3 overflow-y-auto font-mono text-[10px] text-green-400 shadow-inner">
+                                    {testLogs.length === 0 && <span className="opacity-50 text-stone-500">No logs yet...</span>}
+                                    {testLogs.map((log, i) => (
+                                        <div key={i} className="mb-1 break-all">{log}</div>
+                                    ))}
+                                    <div ref={logsEndRef} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={handleSaveSettings} 
+                            className={`w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r ${theme.gradient} shadow-lg active:scale-95 mt-2`}
+                        >
+                            {t('saveChanges')}
+                        </button>
                     </div>
                 </div>
             )}

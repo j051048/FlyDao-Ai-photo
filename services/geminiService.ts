@@ -1,20 +1,34 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-/**
- * Generates an image using Gemini models (nano-banana series).
- * Follows official SDK guidelines for initialization and content generation.
- */
-export const generateImageWithGemini = async (prompt: string, imageBase64: string, model: string = 'gemini-2.5-flash-image'): Promise<string> => {
-    // CRITICAL: The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-    // Create a new instance right before making an API call to ensure it always uses the most up-to-date key.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    // Extract base64 data if it contains the data:image prefix
-    const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+export interface GenAIConfig {
+    apiKey?: string;
+    baseUrl?: string;
+}
 
-    // Use generateContent for nano-banana series models (e.g., gemini-2.5-flash-image, gemini-3-pro-image-preview)
-    // Mapping aliases to correct full model names if necessary
+/**
+ * Helper to initialize AI client with optional config
+ */
+const getClient = (config?: GenAIConfig) => {
+    // If config provides keys, use them. Otherwise fallback to process.env (legacy/dev support)
+    const apiKey = config?.apiKey || process.env.API_KEY;
+    
+    // GoogleGenAI options allow passing baseUrl if needed for proxies
+    const options: any = { apiKey };
+    if (config?.baseUrl) {
+        options.baseUrl = config.baseUrl;
+    }
+    
+    return new GoogleGenAI(options);
+};
+
+/**
+ * Generates an image using Gemini models.
+ */
+export const generateImageWithGemini = async (prompt: string, imageBase64: string, model: string = 'gemini-2.5-flash-image', config?: GenAIConfig): Promise<string> => {
+    const ai = getClient(config);
+    
+    const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
     const targetModel = model === 'nano-banana' ? 'gemini-2.5-flash-image' : model;
 
     const response = await ai.models.generateContent({
@@ -24,16 +38,14 @@ export const generateImageWithGemini = async (prompt: string, imageBase64: strin
                 { text: prompt },
                 {
                     inlineData: {
-                        mimeType: 'image/jpeg', // Standardize to jpeg for consistent processing
+                        mimeType: 'image/jpeg',
                         data: cleanBase64
                     }
                 }
             ]
         },
-        // Optional configuration can be added here (e.g., aspectRatio)
     });
 
-    // The output response may contain both image and text parts; iterate through all parts to find the image part.
     for (const part of response.candidates?.[0]?.content?.parts || []) {
         if (part.inlineData) {
             const base64EncodeString: string = part.inlineData.data;
@@ -45,4 +57,23 @@ export const generateImageWithGemini = async (prompt: string, imageBase64: strin
     }
 
     throw new Error("No image generated. The model might have refused the request due to safety filters or reached its token limit.");
+};
+
+/**
+ * Tests the connection to the Gemini API (or Proxy).
+ */
+export const testGeminiConnection = async (config: GenAIConfig, model: string): Promise<string> => {
+    const ai = getClient(config);
+    const targetModel = model === 'nano-banana' ? 'gemini-2.5-flash-image' : model;
+    
+    // We send a very simple text prompt to check connectivity
+    const response = await ai.models.generateContent({
+        model: targetModel,
+        contents: { parts: [{ text: "Hello, reply with 'OK' if you receive this." }] },
+        config: {
+            maxOutputTokens: 10
+        }
+    });
+
+    return response.text || "No text response received, but connection seems established.";
 };

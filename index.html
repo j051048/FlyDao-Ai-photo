@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -85,12 +86,13 @@
     };
 
     // Shim process object for browser environments with injected credentials
-    // IMPORTANT: These values act as fallbacks if the build process doesn't inject environment variables
     window.process = { 
         env: { 
             API_KEY: "", 
             NEXT_PUBLIC_SUPABASE_URL: "https://ogfzseepxjzqwqznfnik.supabase.co", 
-            NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_jvDntvuh9jGMZ_-wiO-ICw_AdVzmz_z" 
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_jvDntvuh9jGMZ_-wiO-ICw_AdVzmz_z",
+            // Add your Stripe Publishable Key here for local testing or ensure it's injected in prod
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_sample_key_replace_me" 
         } 
     };
 </script>
@@ -104,6 +106,7 @@
     "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?external=react,react-dom",
     "@google/genai": "https://esm.sh/@google/genai@1.32.0",
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.48.1",
+    "@stripe/stripe-js": "https://esm.sh/@stripe/stripe-js@3.0.7",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/"
   }

@@ -219,7 +219,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user }) => {
                                 className="hidden" 
                             />
                             
-                            <div className="text-center">
+                            <div className="text-center space-y-2">
                                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
                                     profile?.subscription_status === 'pro' 
                                         ? 'bg-purple-100 text-purple-700 border-purple-200' 
@@ -227,6 +227,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user }) => {
                                 }`}>
                                     {profile?.subscription_status === 'pro' ? t('planPro') : t('planFree')}
                                 </span>
+                                
+                                {/* UPGRADE BUTTON: Only show if free */}
+                                {profile?.subscription_status !== 'pro' && (
+                                    <div>
+                                        <button 
+                                            onClick={() => navigate('/subscribe')}
+                                            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg hover:opacity-90 transition-opacity flex items-center gap-1 mx-auto"
+                                        >
+                                            {t('upgradeToPro')}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

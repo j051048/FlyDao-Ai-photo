@@ -96,4 +96,20 @@ export interface Translation {
     uploading: string;
     errorAvatarSize: string;
     errorUploadFailed: string;
+    // Subscription
+    upgradeToPro: string;
+    subscribeTitle: string;
+    subscribeSubtitle: string;
+    perMonth: string;
+    feature1: string;
+    feature2: string;
+    feature3: string;
+    feature4: string;
+    subscribeBtn: string;
+    restorePurchase: string;
+    paymentSuccessTitle: string;
+    paymentSuccessDesc: string;
+    returnHome: string;
+    paymentCancelTitle: string;
+    paymentCancelDesc: string;
 }

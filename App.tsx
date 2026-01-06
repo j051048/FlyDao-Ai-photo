@@ -7,6 +7,7 @@ import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
 import { generateImageWithGemini, testGeminiConnection } from './services/geminiService';
 import { ProfilePage } from './components/ProfilePage';
+import { SubscribePage, PaymentSuccessPage, PaymentCancelPage } from './components/SubscribePage';
 
 // --- Global UI Components ---
 
@@ -518,6 +519,9 @@ const App = () => {
             <Route path="/signup" element={session ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
             <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" replace />} />
             <Route path="/profile" element={session ? <ProfilePage user={session.user} /> : <Navigate to="/login" replace />} />
+            <Route path="/subscribe" element={session ? <SubscribePage user={session.user} /> : <Navigate to="/login" replace />} />
+            <Route path="/payment/success" element={<PaymentSuccessPage />} />
+            <Route path="/payment/cancel" element={<PaymentCancelPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
     );

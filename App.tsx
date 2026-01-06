@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -5,6 +6,7 @@ import { Theme, ResultItem, Config, AppLanguage, GenerationMode } from './types'
 import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
 import { generateImageWithGemini } from './services/geminiService';
+import { ProfilePage } from './components/ProfilePage';
 
 // --- Global UI Components ---
 
@@ -281,13 +283,13 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
         <div className={`min-h-screen transition-colors duration-700 ${theme.bg} ${theme.text} pb-20`}>
             <nav className="sticky top-0 z-40 px-6 py-4">
                 <div className="nano-glass rounded-full px-6 py-3 flex items-center justify-between shadow-lg max-w-5xl mx-auto">
-                    <div className="flex items-center gap-3">
+                    <Link to="/profile" className="flex items-center gap-3 hover:opacity-70 transition-opacity">
                         <div className={`w-10 h-10 rounded-full ${theme.primary} flex items-center justify-center text-white text-xl shadow-inner`}>{theme.emoji}</div>
                         <div className="hidden sm:block">
                             <h1 className="font-bold text-lg leading-none">{t('appTitle')}</h1>
                             <span className="text-[10px] font-bold opacity-60 uppercase">{user.email}</span>
                         </div>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-2">
                         <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="px-3 py-1.5 rounded-full bg-white/50 hover:bg-white text-xs font-bold border border-white/50 transition-colors">{lang === 'zh' ? 'EN' : '中'}</button>
                         <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-full hover:bg-black/5" aria-label="Settings"><Icons.Settings className="w-6 h-6" /></button>
@@ -408,6 +410,7 @@ const App = () => {
             <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
             <Route path="/signup" element={session ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
             <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" replace />} />
+            <Route path="/profile" element={session ? <ProfilePage user={session.user} /> : <Navigate to="/login" replace />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
     );

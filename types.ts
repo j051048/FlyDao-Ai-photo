@@ -1,3 +1,4 @@
+
 export interface Theme {
     id: string;
     name: string;
@@ -31,6 +32,14 @@ export interface Config {
     apiKey: string;
     model: string;
     googleKey?: string; // Legacy
+}
+
+export interface Profile {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    bio: string | null;
+    subscription_status: 'free' | 'pro';
 }
 
 export type AppLanguage = 'zh' | 'en';
@@ -70,4 +79,16 @@ export interface Translation {
     testing: string;
     testSuccess: string;
     testFailed: string;
+    // Profile
+    profileTitle: string;
+    fullName: string;
+    bio: string;
+    bioPlaceholder: string;
+    email: string;
+    subscription: string;
+    planFree: string;
+    planPro: string;
+    saveProfile: string;
+    backToDash: string;
+    profileSaved: string;
 }

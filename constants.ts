@@ -1,3 +1,4 @@
+
 import { Theme, StyleItem, Translation } from './types';
 
 export const TRANSLATIONS: Record<string, Translation> = {
@@ -35,6 +36,18 @@ export const TRANSLATIONS: Record<string, Translation> = {
         testing: "连接测试中...",
         testSuccess: "连接成功！API 有效 ✅",
         testFailed: "连接失败: ",
+        // Profile
+        profileTitle: "个人档案",
+        fullName: "全名",
+        bio: "个人简介",
+        bioPlaceholder: "写一句话介绍你自己...",
+        email: "电子邮箱",
+        subscription: "订阅计划",
+        planFree: "免费版",
+        planPro: "专业版",
+        saveProfile: "保存资料",
+        backToDash: "返回创作",
+        profileSaved: "资料已更新 ✨",
     },
     en: {
         appTitle: "AI Photo Booth",
@@ -70,6 +83,18 @@ export const TRANSLATIONS: Record<string, Translation> = {
         testing: "Testing...",
         testSuccess: "Connection Verified ✅",
         testFailed: "Connection Failed: ",
+        // Profile
+        profileTitle: "My Profile",
+        fullName: "Full Name",
+        bio: "Bio",
+        bioPlaceholder: "A short intro about you...",
+        email: "Email",
+        subscription: "Subscription",
+        planFree: "Free Tier",
+        planPro: "Pro Tier",
+        saveProfile: "Save Profile",
+        backToDash: "Back to Studio",
+        profileSaved: "Profile Updated ✨",
     }
 };
 

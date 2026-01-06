@@ -1,21 +1,187 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Theme, ResultItem, Config, AppLanguage, GenerationMode } from './types';
 import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
 import { generateImageWithGemini } from './services/geminiService';
 
-// Helper for safe storage access
-const getStorageItem = (key: string) => {
-    if (typeof localStorage !== 'undefined') {
-        return localStorage.getItem(key);
-    }
-    return null;
+// --- Global UI Components ---
+
+const LoadingScreen = () => (
+    <div className="min-h-screen bg-[#FEF9C3] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+            <p className="text-stone-500 font-bold animate-pulse text-sm">Nano Banana OS is booting...</p>
+        </div>
+    </div>
+);
+
+const ConfigWarning = () => (
+    <div className="min-h-screen bg-rose-50 flex items-center justify-center p-6 text-center">
+        <div className="max-w-md space-y-4">
+            <div className="text-5xl">🚧</div>
+            <h1 className="text-2xl font-black text-rose-900">环境配置缺失</h1>
+            <p className="text-rose-700 font-medium">应用需要 <b>SUPABASE_URL</b> 和 <b>SUPABASE_ANON_KEY</b> 才能运行。</p>
+            <div className="p-4 bg-white/50 rounded-2xl text-left font-mono text-xs border border-rose-100 text-stone-600">
+                <p className="mb-2 font-bold text-rose-800">如何修复:</p>
+                1. 在 index.html 或 Vercel 环境变量中填入 Supabase Key<br/>
+                2. 或在 lib/supabase.ts 中配置 defaultUrl/defaultKey
+            </div>
+            <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" className="inline-block px-6 py-3 bg-rose-200 hover:bg-rose-300 text-rose-900 rounded-xl font-bold text-sm transition-colors">
+                前往 Supabase 获取 Key &rarr;
+            </a>
+        </div>
+    </div>
+);
+
+// --- Auth Components ---
+
+const AuthLayout = ({ children, title }: { children?: React.ReactNode, title: string }) => {
+    return (
+        <div className="min-h-screen bg-[#FEF9C3] flex items-center justify-center p-4">
+            <div className="w-full max-w-md animate-pop">
+                <div className="nano-glass rounded-[2.5rem] p-8 shadow-2xl space-y-6">
+                    <div className="text-center space-y-2">
+                        <div className="w-16 h-16 bg-yellow-400 rounded-3xl flex items-center justify-center text-3xl mx-auto shadow-lg rotate-3 mb-4">🍌</div>
+                        <h1 className="text-3xl font-black text-stone-800 tracking-tight">{title}</h1>
+                        <p className="text-stone-500 font-medium text-sm">Welcome to Nano Banana OS</p>
+                    </div>
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
 };
 
-const DEFAULT_BASE_URL = 'https://proxy.flydao.top/v1';
+const LoginPage = () => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const navigate = useNavigate();
 
-const AIPhotoStudio = () => {
-    // State
+    const handleEmailLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        try {
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            // Navigation handled by AuthStateChange in App component
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+        if (error) setError(error.message);
+    };
+
+    return (
+        <AuthLayout title="登入写真馆">
+            <form onSubmit={handleEmailLogin} className="space-y-4">
+                <input 
+                    type="email" placeholder="Email" required
+                    className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-yellow-400 focus:outline-none transition-all font-medium"
+                    value={email} onChange={e => setEmail(e.target.value)}
+                />
+                <input 
+                    type="password" placeholder="Password" required
+                    className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-yellow-400 focus:outline-none transition-all font-medium"
+                    value={password} onChange={e => setPassword(e.target.value)}
+                />
+                <button 
+                    disabled={loading}
+                    className="w-full py-4 bg-yellow-400 hover:bg-yellow-500 text-stone-800 font-bold rounded-2xl shadow-lg transition-all active:scale-95 flex justify-center items-center"
+                >
+                    {loading ? <div className="w-5 h-5 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" /> : '登录'}
+                </button>
+            </form>
+            <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-stone-200"></div>
+                <span className="flex-shrink mx-4 text-stone-400 text-xs font-bold uppercase tracking-widest">OR</span>
+                <div className="flex-grow border-t border-stone-200"></div>
+            </div>
+            <button onClick={handleGoogleLogin} className="w-full py-4 bg-white border-2 border-stone-100 hover:bg-stone-50 text-stone-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+                Google 登录
+            </button>
+            {error && <p className="text-red-500 text-xs font-bold text-center mt-2">🚨 {error}</p>}
+            <p className="text-center text-sm text-stone-500 font-medium">
+                没有账号? <Link to="/signup" className="text-yellow-600 font-bold hover:underline">立即注册</Link>
+            </p>
+        </AuthLayout>
+    );
+};
+
+const SignupPage = () => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
+
+    const handleSignup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        try {
+            const { error } = await supabase.auth.signUp({ email, password });
+            if (error) throw error;
+            setSuccess(true);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (success) {
+        return (
+            <AuthLayout title="注册成功">
+                <div className="text-center space-y-4">
+                    <p className="text-stone-600 font-medium">请检查您的邮箱以完成验证。</p>
+                    <Link to="/login" className="block w-full py-4 bg-yellow-400 text-stone-800 font-bold rounded-2xl">返回登录</Link>
+                </div>
+            </AuthLayout>
+        );
+    }
+
+    return (
+        <AuthLayout title="创建新账号">
+            <form onSubmit={handleSignup} className="space-y-4">
+                <input 
+                    type="email" placeholder="Email" required
+                    className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-yellow-400 focus:outline-none font-medium"
+                    value={email} onChange={e => setEmail(e.target.value)}
+                />
+                <input 
+                    type="password" placeholder="Password (min 6 chars)" required minLength={6}
+                    className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-yellow-400 focus:outline-none font-medium"
+                    value={password} onChange={e => setPassword(e.target.value)}
+                />
+                <button 
+                    disabled={loading}
+                    className="w-full py-4 bg-yellow-400 text-stone-800 font-bold rounded-2xl shadow-lg transition-all active:scale-95 flex justify-center items-center"
+                >
+                    {loading ? <div className="w-5 h-5 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" /> : '注册'}
+                </button>
+            </form>
+            {error && <p className="text-red-500 text-xs font-bold text-center mt-2">🚨 {error}</p>}
+            <p className="text-center text-sm text-stone-500 font-medium">
+                已有账号? <Link to="/login" className="text-yellow-600 font-bold hover:underline">去登录</Link>
+            </p>
+        </AuthLayout>
+    );
+};
+
+// --- Dashboard ---
+
+const AIPhotoStudio = ({ user }: { user: any }) => {
     const [currentTheme, setCurrentTheme] = useState<string>('banana');
     const [lang, setLang] = useState<AppLanguage>('zh');
     const [generationMode, setGenerationMode] = useState<GenerationMode>('preset');
@@ -24,193 +190,38 @@ const AIPhotoStudio = () => {
     const [isGlobalGenerating, setIsGlobalGenerating] = useState<boolean>(false);
     const [results, setResults] = useState<ResultItem[]>([]);
     const [error, setError] = useState<string>('');
-    
-    // Settings State
-    const [config, setConfig] = useState<Config>({
-        // Force provider to thirdparty, ignoring previous official setting
-        provider: 'thirdparty',
-        // Allow loading from storage, fallback to default if empty
-        baseUrl: getStorageItem('api_base_url') || DEFAULT_BASE_URL,
-        apiKey: getStorageItem('api_key') || '123456789',
-        model: getStorageItem('api_model') || 'gemini-2.5-flash-image'
-    });
     const [showSettings, setShowSettings] = useState<boolean>(false);
-    
-    // Testing Connection State
-    const [isTesting, setIsTesting] = useState(false);
-    const [testResult, setTestResult] = useState<{success: boolean, message: string} | null>(null);
-    
+    const [model, setModel] = useState<string>(localStorage.getItem('api_model') || 'gemini-2.5-flash-image');
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
     
     const theme = THEMES[currentTheme] || THEMES.banana;
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS[lang][key];
 
-    const saveConfig = (newConfig: Config) => {
-        setConfig(newConfig);
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('api_provider', 'thirdparty'); // Always save as thirdparty
-            localStorage.setItem('api_base_url', newConfig.baseUrl); 
-            localStorage.setItem('api_key', newConfig.apiKey);
-            localStorage.setItem('api_model', newConfig.model);
+    const handleLogout = async () => {
+        try {
+            await supabase.auth.signOut();
+            // Auth state listener in App will handle navigation
+        } catch (error) {
+            console.error('Error logging out:', error);
         }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.size > 8 * 1024 * 1024) { 
+            if (file.size > 8 * 1024 * 1024) {
                 setError(t('errorTooLarge'));
                 return;
             }
             const reader = new FileReader();
-            reader.onload = (event) => {
-                if (event.target?.result) {
-                    setSourceImage(event.target.result as string);
-                    setResults([]); // Clear previous
-                    setError('');
-                }
+            reader.onload = (ev) => {
+                setSourceImage(ev.target?.result as string);
+                setError('');
             };
             reader.readAsDataURL(file);
-        }
-    };
-
-    const generateImageAPI = async (prompt: string, sourceImg: string): Promise<string> => {
-        // Always use 'thirdparty' logic effectively since we removed the toggle
-        
-        let finalPrompt = prompt;
-        // Check if we need to append constraint
-        if (!finalPrompt.includes('IDENTITY CONSTRAINT')) {
-            finalPrompt += " \n\n[IDENTITY CONSTRAINT]: Strictly maintain the facial identity, bone structure, and features of the person in the provided image. High fidelity face preservation.";
-        }
-
-        // Third Party / Proxy Implementation (Fetch)
-        if (!config.apiKey) throw new Error(t('errorNoKey'));
-        
-        // Safer URL construction
-        let baseUrl = config.baseUrl.trim().replace(/\/$/, '');
-        let endpoint = '';
-
-        // Handle standard OneAPI / OpenAI paths
-        if (baseUrl.includes('/chat/completions')) {
-            endpoint = baseUrl;
-        } else if (baseUrl.endsWith('/v1')) {
-            endpoint = `${baseUrl}/chat/completions`;
-        } else {
-            endpoint = `${baseUrl}/v1/chat/completions`;
-        }
-
-        const payload = {
-            model: config.model,
-            messages: [{
-                role: "user",
-                content: [
-                    { type: "text", text: finalPrompt },
-                    { type: "image_url", image_url: { url: sourceImg } }
-                ]
-            }],
-            stream: false,
-            max_tokens: 4096 // Critical for some vision models wrapped as chat
-        };
-        
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
-            body: JSON.stringify(payload)
-        });
-        
-        if (!res.ok) {
-            let errorMsg = t('errorGenFailed');
-            try {
-               const errData = await res.json();
-               if (errData.error?.message) errorMsg = errData.error.message;
-            } catch(e) {}
-            throw new Error(errorMsg);
-        }
-        const data = await res.json();
-        
-        if (data.data && data.data[0] && data.data[0].url) return data.data[0].url;
-        const content = data.choices?.[0]?.message?.content || "";
-        const urlMatch = content.match(/https?:\/\/[^\s"']+\.(png|jpg|jpeg|webp)/i) || content.match(/\!\[.*?\]\((.*?)\)/);
-        if (urlMatch) return urlMatch[1] || urlMatch[0];
-        
-        throw new Error(t('errorGenFailed'));
-    };
-
-    const handleTestConnection = async () => {
-        if (!config.apiKey) {
-            setTestResult({ success: false, message: lang === 'zh' ? '请先填写 API Key' : 'Please enter API Key' });
-            return;
-        }
-        
-        setIsTesting(true);
-        setTestResult(null);
-
-        try {
-            // Normalize Base URL
-            let baseUrl = config.baseUrl.trim().replace(/\/$/, '');
-            // We want to test /models endpoint first as it's the standard non-charging check
-            let modelsEndpoint = '';
-            
-            if (baseUrl.endsWith('/v1')) {
-                modelsEndpoint = `${baseUrl}/models`;
-            } else if (baseUrl.includes('/chat/completions')) {
-                modelsEndpoint = baseUrl.replace('/chat/completions', '/models');
-            } else {
-                modelsEndpoint = `${baseUrl}/v1/models`;
-            }
-
-            // Attempt 1: Check Models List
-            const res = await fetch(modelsEndpoint, {
-                method: 'GET',
-                headers: { 
-                    'Authorization': `Bearer ${config.apiKey}` 
-                }
-            });
-
-            if (res.ok) {
-                setTestResult({ success: true, message: t('testSuccess') });
-            } else {
-                // Attempt 2: If /models fails (some proxies block it), try a lightweight chat completion
-                // IMPORTANT: We use 'gpt-3.5-turbo' for this test because
-                // selecting an image model (like Midjourney) for a text "Hello" ping will fail.
-                let chatEndpoint = '';
-                if (baseUrl.includes('/chat/completions')) chatEndpoint = baseUrl;
-                else if (baseUrl.endsWith('/v1')) chatEndpoint = `${baseUrl}/chat/completions`;
-                else chatEndpoint = `${baseUrl}/v1/chat/completions`;
-
-                const fallbackPayload = {
-                    model: 'gpt-3.5-turbo', // Safe fallback model for connectivity check
-                    messages: [{ role: "user", content: "Hi" }],
-                    max_tokens: 1
-                };
-
-                const fallbackRes = await fetch(chatEndpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
-                    body: JSON.stringify(fallbackPayload)
-                });
-
-                if (fallbackRes.ok) {
-                    setTestResult({ success: true, message: t('testSuccess') });
-                } else {
-                    let errorMsg = res.statusText; // use original error
-                    try {
-                        const errData = await res.json(); // try to parse original error
-                        if (errData.error?.message) errorMsg = errData.error.message;
-                        else {
-                             // try fallback error
-                             const fbData = await fallbackRes.json();
-                             if (fbData.error?.message) errorMsg = fbData.error.message;
-                        }
-                    } catch(e) {}
-                    setTestResult({ success: false, message: t('testFailed') + errorMsg });
-                }
-            }
-        } catch (e: any) {
-             setTestResult({ success: false, message: t('testFailed') + e.message });
-        } finally {
-            setIsTesting(false);
         }
     };
 
@@ -219,384 +230,116 @@ const AIPhotoStudio = () => {
         setIsGlobalGenerating(true);
         setError('');
         
-        // Determine items to generate
-        let itemsToGen: ResultItem[] = [];
-        if (generationMode === 'custom') {
-            if (!customPrompt.trim()) {
-                setError(lang === 'zh' ? '请输入提示词' : 'Please enter a prompt');
-                setIsGlobalGenerating(false);
-                return;
-            }
-            itemsToGen = [{
-                id: 'custom-' + Date.now(),
-                title: t('customTitle'),
-                emoji: '🎨',
-                prompt: customPrompt,
-                status: 'loading'
-            }];
-        } else {
-            itemsToGen = STYLES.map(s => ({ 
-                ...s, 
-                status: 'loading' as const, 
-                imageUrl: undefined 
-            }));
-        }
-
-        // Set Initial State
+        const itemsToGen: ResultItem[] = generationMode === 'custom' 
+            ? [{ id: 'custom-'+Date.now(), title: t('customTitle'), emoji: '🎨', prompt: customPrompt, status: 'loading' }]
+            : STYLES.map(s => ({ ...s, status: 'loading' as const }));
+        
         setResults(itemsToGen);
-
         setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
 
-        // Execute
-        const promises = itemsToGen.map(async (item, idx) => {
-            // Stagger preset generations for visual effect
-            if (generationMode === 'preset') await new Promise(r => setTimeout(r, idx * 800));
-            
+        await Promise.all(itemsToGen.map(async (item) => {
             try {
-                const url = await generateImageAPI(item.prompt, sourceImage);
+                // Handle key selection for pro model
+                if (model === 'gemini-3-pro-image-preview') {
+                    if (!(await (window as any).aistudio?.hasSelectedApiKey())) {
+                        await (window as any).aistudio?.openSelectKey();
+                    }
+                }
+                const url = await generateImageWithGemini(item.prompt, sourceImage, model);
                 setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'success', imageUrl: url } : r));
             } catch (e: any) {
+                console.error(e);
                 setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'error' } : r));
-                if(idx === 0) setError(e.message || t('errorGenFailed'));
+                setError(e.message || t('errorGenFailed'));
             }
-        });
-
-        await Promise.all(promises);
+        }));
         setIsGlobalGenerating(false);
     };
 
-    const handleRegenerateSingle = async (itemToRegen: ResultItem) => {
-        setResults(prev => prev.map(r => r.id === itemToRegen.id ? { ...r, status: 'loading' } : r));
-        try {
-            const url = await generateImageAPI(itemToRegen.prompt, sourceImage!);
-            setResults(prev => prev.map(r => r.id === itemToRegen.id ? { ...r, status: 'success', imageUrl: url } : r));
-        } catch (e: any) {
-            setResults(prev => prev.map(r => r.id === itemToRegen.id ? { ...r, status: 'error' } : r));
-            setError(e.message || t('errorGenFailed'));
-        }
-    };
-
-    const handleDownload = (imageUrl: string, filename: string) => {
-        if (!imageUrl) return;
-        const link = document.createElement('a');
-        link.href = imageUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const ThemeSwitcher = () => (
-        <div className="flex gap-2 p-2 bg-white/50 backdrop-blur rounded-2xl border border-white/50 shadow-sm mb-6 w-fit mx-auto">
-            {Object.values(THEMES).map(t => (
-                <button 
-                    key={t.id}
-                    onClick={() => setCurrentTheme(t.id)}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-all duration-300 ${currentTheme === t.id ? 'bg-white shadow-md scale-110' : 'hover:bg-white/50 opacity-70 grayscale hover:grayscale-0'}`}
-                    title={t.name}
-                >
-                    {t.emoji}
-                </button>
-            ))}
-        </div>
-    );
-
     return (
-        <div className={`min-h-screen transition-colors duration-700 ${theme.bg} ${theme.text} pb-20 selection:bg-amber-200 selection:text-amber-900`}>
-            
-            {/* Navbar */}
+        <div className={`min-h-screen transition-colors duration-700 ${theme.bg} ${theme.text} pb-20`}>
             <nav className="sticky top-0 z-40 px-6 py-4">
-                <div className="nano-glass rounded-full px-6 py-3 flex items-center justify-between shadow-lg shadow-black/5 max-w-5xl mx-auto">
+                <div className="nano-glass rounded-full px-6 py-3 flex items-center justify-between shadow-lg max-w-5xl mx-auto">
                     <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full ${theme.primary} flex items-center justify-center text-white text-xl shadow-inner`}>
-                            {theme.emoji}
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-lg leading-none tracking-tight">{t('appTitle')}</h1>
-                            <span className={`text-[10px] font-bold opacity-60 uppercase tracking-widest`}>{t('subtitle')}</span>
+                        <div className={`w-10 h-10 rounded-full ${theme.primary} flex items-center justify-center text-white text-xl shadow-inner`}>{theme.emoji}</div>
+                        <div className="hidden sm:block">
+                            <h1 className="font-bold text-lg leading-none">{t('appTitle')}</h1>
+                            <span className="text-[10px] font-bold opacity-60 uppercase">{user.email}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                         <button 
-                            onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
-                            className="px-3 py-1.5 rounded-full bg-white/50 hover:bg-white text-xs font-bold border border-white/50 transition-colors"
-                        >
-                            {lang === 'zh' ? 'EN' : '中'}
-                        </button>
-                        <button 
-                            onClick={() => setShowSettings(true)}
-                            className={`p-2.5 rounded-full hover:bg-black/5 transition-colors`}
-                        >
-                            <Icons.Settings className="w-6 h-6" />
-                        </button>
+                        <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="px-3 py-1.5 rounded-full bg-white/50 hover:bg-white text-xs font-bold border border-white/50 transition-colors">{lang === 'zh' ? 'EN' : '中'}</button>
+                        <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-full hover:bg-black/5" aria-label="Settings"><Icons.Settings className="w-6 h-6" /></button>
+                        <button onClick={handleLogout} className="p-2.5 rounded-full hover:bg-red-50 text-red-400" aria-label="Logout"><Icons.X className="w-6 h-6" /></button>
                     </div>
                 </div>
             </nav>
 
             <main className="max-w-3xl mx-auto px-4 pt-8">
-                
-                <ThemeSwitcher />
+                <div className="flex gap-2 p-2 bg-white/50 backdrop-blur rounded-2xl border border-white/50 shadow-sm mb-6 w-fit mx-auto">
+                    {Object.values(THEMES).map(t => (
+                        <button key={t.id} onClick={() => setCurrentTheme(t.id)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${currentTheme === t.id ? 'bg-white shadow-md scale-110' : 'opacity-70 grayscale hover:grayscale-0'}`} aria-label={`Select ${t.name} theme`}>{t.emoji}</button>
+                    ))}
+                </div>
 
-                {/* Hero / Upload */}
                 <div className="text-center space-y-8 mb-12 animate-fade-in">
                     <div className="space-y-2">
-                        <h2 className={`text-4xl md:text-5xl font-black tracking-tight ${theme.accent}`}>
-                            Create Your <br/>
-                            <span className={`bg-gradient-to-r ${theme.gradient} bg-clip-text text-transparent`}>Digital Vibe</span>
-                        </h2>
-                        <p className="opacity-60 font-medium">✨ Upload one photo, get infinite styles ✨</p>
+                        <h2 className={`text-4xl md:text-5xl font-black tracking-tight ${theme.accent}`}>Create Your <br/><span className={`bg-gradient-to-r ${theme.gradient} bg-clip-text text-transparent`}>Digital Vibe</span></h2>
+                        <p className="opacity-60 font-medium">{t('subtitle')}</p>
                     </div>
 
-                    {/* Upload Card */}
-                    <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`
-                            relative group cursor-pointer transition-all duration-500
-                            aspect-[4/3] md:aspect-[2/1] rounded-[2.5rem]
-                            border-4 border-dashed ${theme.border} bg-white/40
-                            hover:bg-white/60 hover:scale-[1.01] hover:border-double
-                            flex flex-col items-center justify-center overflow-hidden
-                        `}
-                    >
-                        {sourceImage ? (
-                            <>
-                                <img src={sourceImage} alt="Source" className="w-full h-full object-contain p-4 opacity-90 group-hover:opacity-100 transition-opacity" />
-                                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                                    <div className="bg-white px-6 py-3 rounded-full font-bold shadow-xl flex items-center gap-2">
-                                        <Icons.Refresh className="w-4 h-4" /> {t('changePhoto')}
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="space-y-4 pointer-events-none">
-                                <div className={`w-20 h-20 mx-auto rounded-3xl ${theme.secondary} flex items-center justify-center rotate-3 group-hover:rotate-12 transition-transform duration-300`}>
-                                    <Icons.Camera className={`w-10 h-10 ${theme.accent}`} />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="font-bold text-xl">{t('uploadTitle')}</p>
-                                    <p className="text-sm opacity-60">{t('uploadDesc')}</p>
-                                </div>
-                            </div>
-                        )}
+                    <div onClick={() => fileInputRef.current?.click()} className={`relative group cursor-pointer aspect-[4/3] md:aspect-[2/1] rounded-[2.5rem] border-4 border-dashed ${theme.border} bg-white/40 flex flex-col items-center justify-center overflow-hidden transition-all hover:bg-white/60`}>
+                        {sourceImage ? <img src={sourceImage} className="w-full h-full object-contain p-4" alt="Uploaded source" /> : <div className="space-y-4"><Icons.Camera className={`w-12 h-12 ${theme.accent} mx-auto`} /><p className="font-bold text-xl">{t('uploadTitle')}</p></div>}
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                     </div>
 
-                    {/* Mode Switcher */}
                     <div className="flex justify-center w-full">
                         <div className="bg-white/40 p-1.5 rounded-2xl flex gap-1 border border-white/50 w-full max-w-sm">
-                            <button
-                                onClick={() => setGenerationMode('preset')}
-                                className={`flex-1 py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${generationMode === 'preset' ? 'bg-white shadow-md' : 'opacity-60 hover:opacity-100'}`}
-                            >
-                                <Icons.Magic className="w-4 h-4" /> {t('modePreset')}
-                            </button>
-                            <button
-                                onClick={() => setGenerationMode('custom')}
-                                className={`flex-1 py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${generationMode === 'custom' ? 'bg-white shadow-md' : 'opacity-60 hover:opacity-100'}`}
-                            >
-                                <Icons.PenTool className="w-4 h-4" /> {t('modeCustom')}
-                            </button>
+                            <button onClick={() => setGenerationMode('preset')} className={`flex-1 py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${generationMode === 'preset' ? 'bg-white shadow-md' : 'opacity-60'}`}><Icons.Magic className="w-4 h-4"/>{t('modePreset')}</button>
+                            <button onClick={() => setGenerationMode('custom')} className={`flex-1 py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${generationMode === 'custom' ? 'bg-white shadow-md' : 'opacity-60'}`}><Icons.PenTool className="w-4 h-4"/>{t('modeCustom')}</button>
                         </div>
                     </div>
 
-                     {/* Custom Prompt Input */}
                     {generationMode === 'custom' && (
                         <div className="w-full max-w-xl mx-auto animate-pop text-left bg-white/40 p-4 rounded-3xl border border-white/60">
                             <label className="block text-xs font-bold uppercase tracking-widest mb-2 ml-1 opacity-60">{t('promptLabel')}</label>
-                            <textarea 
-                                value={customPrompt}
-                                onChange={(e) => setCustomPrompt(e.target.value)}
-                                placeholder={t('customPlaceholder')}
-                                className="w-full bg-white/80 border-2 border-transparent focus:border-white rounded-xl px-4 py-4 focus:outline-none min-h-[100px] text-sm leading-relaxed resize-none shadow-inner"
-                            ></textarea>
+                            <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} placeholder={t('customPlaceholder')} className="w-full bg-white/80 border-2 border-transparent focus:border-white rounded-xl px-4 py-4 focus:outline-none min-h-[100px] text-sm leading-relaxed resize-none shadow-inner"></textarea>
                         </div>
                     )}
 
-                    {/* Generate Button */}
-                    {sourceImage && (
-                        <button
-                            onClick={handleGenerate}
-                            disabled={isGlobalGenerating}
-                            className={`
-                                w-full py-5 rounded-3xl font-black text-xl text-white tracking-wide
-                                shadow-xl ${theme.buttonShadow}
-                                bg-gradient-to-r ${theme.gradient}
-                                transform transition-all duration-200
-                                ${isGlobalGenerating ? 'opacity-80 scale-95 cursor-wait' : 'hover:scale-[1.02] active:scale-95 hover:shadow-2xl'}
-                                flex items-center justify-center gap-3
-                            `}
-                        >
-                            {isGlobalGenerating ? (
-                                <>
-                                    <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"/>
-                                    {t('designing')}
-                                </>
-                            ) : (
-                                <>
-                                    <Icons.Magic className="w-6 h-6" /> {generationMode === 'preset' ? t('makeMagic') : t('customGenBtn')}
-                                </>
-                            )}
-                        </button>
-                    )}
-
-                    {error && (
-                        <div className="bg-red-100 text-red-600 px-4 py-3 rounded-2xl font-bold border-2 border-red-200 animate-pop">
-                            🚨 {error}
-                        </div>
-                    )}
+                    <button onClick={handleGenerate} disabled={isGlobalGenerating || !sourceImage} className={`w-full py-5 rounded-3xl font-black text-xl text-white shadow-xl bg-gradient-to-r ${theme.gradient} transform transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed`}>
+                        {isGlobalGenerating ? t('designing') : t('makeMagic')}
+                    </button>
+                    {error && <p className="text-red-500 font-bold bg-white/80 p-2 rounded-xl inline-block shadow-sm">🚨 {error}</p>}
                 </div>
 
-                {/* Results Grid */}
-                <div ref={resultsRef} className="scroll-mt-28">
-                    {results.length > 0 && (
-                        <div className={`grid gap-6 pb-12 ${results.length === 1 ? 'grid-cols-1 max-w-md mx-auto' : 'grid-cols-1 md:grid-cols-2'}`}>
-                            {results.map((item) => (
-                                <div key={item.id} className={`${theme.cardBg} p-3 rounded-[2rem] shadow-xl shadow-black/5 animate-pop border border-white/60`}>
-                                    {/* Card Header */}
-                                    <div className="flex items-center justify-between px-2 mb-3">
-                                        <div className="flex items-center gap-2 overflow-hidden">
-                                            <span className="text-xl filter drop-shadow-sm flex-shrink-0">{item.emoji}</span>
-                                            <span className="font-bold text-lg truncate">{item.title}</span>
-                                        </div>
-                                        {/* Top Right Actions */}
-                                        {item.status === 'success' && (
-                                            <button 
-                                                onClick={() => handleRegenerateSingle(item)}
-                                                className="p-2 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-800 transition-colors flex-shrink-0"
-                                                title={t('tryAgain')}
-                                            >
-                                                <Icons.Refresh className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* Image Area */}
-                                    <div className={`relative aspect-[3/4] rounded-[1.5rem] overflow-hidden ${theme.secondary} pattern-grid group`}>
-                                        {item.status === 'loading' && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                                                <div className={`w-10 h-10 border-4 ${theme.border} border-t-transparent rounded-full animate-spin`}/>
-                                                <span className={`text-xs font-bold uppercase tracking-widest ${theme.accent} animate-pulse`}>{t('rendering')}</span>
-                                            </div>
-                                        )}
-                                        
-                                        {item.status === 'error' && (
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                                                <span className="text-4xl mb-2">😵‍💫</span>
-                                                <p className="text-xs font-bold opacity-60">{t('failed')}</p>
-                                                <button onClick={() => handleRegenerateSingle(item)} className="mt-4 px-4 py-2 bg-white rounded-full text-xs font-bold shadow-sm">{t('tryAgain')}</button>
-                                            </div>
-                                        )}
-
-                                        {item.status === 'success' && item.imageUrl && (
-                                            <>
-                                                <img src={item.imageUrl} alt="Result" className="w-full h-full object-cover" />
-                                                
-                                                {/* Hover Overlay */}
-                                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-4">
-                                                    <div className="flex gap-2 w-full">
-                                                        <button 
-                                                            onClick={() => handleDownload(item.imageUrl!, `nano-${item.id}.png`)}
-                                                            className="flex-1 bg-white text-black py-3 rounded-2xl font-bold text-sm shadow-lg hover:bg-stone-50 active:scale-95 transition-transform flex items-center justify-center gap-2"
-                                                        >
-                                                            <Icons.Download className="w-4 h-4" /> {t('save')}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                <div ref={resultsRef} className="grid gap-6 pb-12 grid-cols-1 md:grid-cols-2">
+                    {results.map(item => (
+                        <div key={item.id} className={`${theme.cardBg} p-3 rounded-[2rem] shadow-xl animate-pop border border-white/60`}>
+                            <div className="flex items-center justify-between px-2 mb-3">
+                                <div className="flex items-center gap-2"><span className="text-xl">{item.emoji}</span><span className="font-bold text-lg">{item.title}</span></div>
+                            </div>
+                            <div className={`relative aspect-[3/4] rounded-[1.5rem] overflow-hidden ${theme.secondary} pattern-grid`}>
+                                {item.status === 'loading' && <div className="absolute inset-0 flex items-center justify-center"><div className="w-10 h-10 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"/></div>}
+                                {item.status === 'success' && <img src={item.imageUrl} className="w-full h-full object-cover" alt={`Generated ${item.title}`} />}
+                                {item.status === 'error' && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-xs font-bold text-red-400">GENERATION FAILED</div>}
+                            </div>
                         </div>
-                    )}
+                    ))}
                 </div>
-
             </main>
 
-            {/* Settings Modal */}
             {showSettings && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-md p-4 animate-fade-in">
-                    <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden">
-                        <div className={`px-6 py-4 ${theme.secondary} flex justify-between items-center`}>
-                            <h3 className={`font-bold text-lg ${theme.accent}`}>{t('settings')} ⚙️</h3>
-                            <button onClick={() => setShowSettings(false)} className="p-2 bg-white/50 rounded-full hover:bg-white"><Icons.X className="w-5 h-5"/></button>
+                    <div className="bg-white w-full max-w-md rounded-[2rem] p-6 space-y-4 shadow-2xl">
+                        <div className="flex justify-between items-center"><h3 className="font-bold text-lg">Settings ⚙️</h3><button onClick={() => setShowSettings(false)} className="p-2 bg-stone-100 rounded-full"><Icons.X className="w-5 h-5"/></button></div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-stone-400 uppercase px-1">Selected Model</label>
+                            <select value={model} onChange={e => { setModel(e.target.value); localStorage.setItem('api_model', e.target.value); }} className="w-full p-4 rounded-xl bg-stone-50 border-2 border-stone-100 font-bold focus:outline-none focus:border-yellow-400">
+                                {MODEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
                         </div>
-                        
-                        <div className="p-6 space-y-4">
-                            {/* Inputs directly, no provider toggle */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold uppercase text-stone-400 ml-2">Config</label>
-                                
-                                {/* Base URL Input - defaulted to proxy.flydao.top but editable */}
-                                <input 
-                                    type="text" 
-                                    placeholder={t('baseUrlPlaceholder')}
-                                    value={config.baseUrl} 
-                                    onChange={e => setConfig({...config, baseUrl: e.target.value})}
-                                    className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm"
-                                />
-
-                                <input 
-                                    type="password" 
-                                    placeholder={t('apiKeyPlaceholder')}
-                                    value={config.apiKey} 
-                                    onChange={e => setConfig({...config, apiKey: e.target.value})}
-                                    className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm"
-                                />
-                                
-                                <label className="text-xs font-bold uppercase text-stone-400 ml-2">{t('model')}</label>
-                                <div className="relative">
-                                    <select 
-                                        value={config.model}
-                                        onChange={(e) => setConfig({...config, model: e.target.value})}
-                                        className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm appearance-none focus:outline-none"
-                                    >
-                                        {MODEL_OPTIONS.map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                        <option value="custom">Custom (Type manually...)</option>
-                                    </select>
-                                    <div className="absolute right-4 top-4 pointer-events-none opacity-50">▼</div>
-                                </div>
-                                {/* Fallback for custom model typing */}
-                                {config.model === 'custom' && (
-                                    <input 
-                                        type="text" 
-                                        placeholder="Enter Model ID (e.g. midjourney-fast)..."
-                                        className="w-full bg-stone-50 border-2 border-stone-100 rounded-xl px-4 py-3 font-mono text-sm mt-2"
-                                        onBlur={(e) => e.target.value && setConfig({...config, model: e.target.value})}
-                                    />
-                                )}
-
-                                {/* Test Connection UI */}
-                                <div className="pt-2">
-                                    <button 
-                                        onClick={handleTestConnection}
-                                        disabled={isTesting}
-                                        className="w-full py-2 rounded-xl text-sm font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 border-2 border-stone-200 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        {isTesting ? (
-                                            <><div className="w-4 h-4 border-2 border-stone-400 border-t-transparent rounded-full animate-spin"/> {t('testing')}</>
-                                        ) : (
-                                            <><Icons.Globe className="w-4 h-4"/> {t('testConnection')}</>
-                                        )}
-                                    </button>
-                                    
-                                    {testResult && (
-                                        <div className={`mt-2 p-2 rounded-lg text-xs font-bold text-center ${testResult.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                            {testResult.message}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <button 
-                                onClick={() => {saveConfig(config); setShowSettings(false);}}
-                                className={`w-full py-3 rounded-xl font-bold text-white shadow-lg bg-gradient-to-r ${theme.gradient} mt-4 active:scale-95 transition-transform`}
-                            >
-                                {t('saveChanges')}
-                            </button>
-                        </div>
+                        <button onClick={() => setShowSettings(false)} className={`w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r ${theme.gradient} shadow-lg active:scale-95`}>保存配置</button>
                     </div>
                 </div>
             )}
@@ -604,4 +347,49 @@ const AIPhotoStudio = () => {
     );
 };
 
-export default AIPhotoStudio;
+const App = () => {
+    const [session, setSession] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // Immediate check: If config is invalid, stop loading immediately
+        if (!isSupabaseConfigured) {
+            setLoading(false);
+            return;
+        }
+
+        // Get initial session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+            setLoading(false); // Stop loading once we know the session state
+        }).catch(err => {
+            console.error("Session check failed", err);
+            setLoading(false);
+        });
+
+        // Listen for changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+            setLoading(false); // Ensure loading is stopped when auth state settles
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    // Priority Check: If config is missing, show warning immediately, don't wait for loading
+    if (!isSupabaseConfigured) return <ConfigWarning />;
+    
+    // Normal loading state
+    if (loading) return <LoadingScreen />;
+
+    return (
+        <Routes>
+            <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+            <Route path="/signup" element={session ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
+            <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+    );
+};
+
+export default App;

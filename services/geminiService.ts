@@ -1,44 +1,48 @@
+
 import { GoogleGenAI } from "@google/genai";
 
-export const generateImageWithGemini = async (prompt: string, imageBase64: string): Promise<string> => {
-    // Note: The API key must be available in process.env.API_KEY
-    // We add a safety check for 'process' to prevent browser ReferenceErrors if the build environment didn't polyfill it.
-    // If process.env.API_KEY is missing, we use a dummy key '123456789' to ensure the SDK initializes
-    // without throwing a client-side error. This is useful if a proxy handles the actual auth downstream.
-    const envKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : undefined;
-    const apiKey = envKey || '123456789';
-
-    const ai = new GoogleGenAI({ apiKey: apiKey });
+/**
+ * Generates an image using Gemini models (nano-banana series).
+ * Follows official SDK guidelines for initialization and content generation.
+ */
+export const generateImageWithGemini = async (prompt: string, imageBase64: string, model: string = 'gemini-2.5-flash-image'): Promise<string> => {
+    // CRITICAL: The API key must be obtained exclusively from the environment variable process.env.API_KEY.
+    // Create a new instance right before making an API call to ensure it always uses the most up-to-date key.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Extract base64 data if it contains the data:image prefix
     const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
+    // Use generateContent for nano-banana series models (e.g., gemini-2.5-flash-image, gemini-3-pro-image-preview)
+    // Mapping aliases to correct full model names if necessary
+    const targetModel = model === 'nano-banana' ? 'gemini-2.5-flash-image' : model;
+
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+        model: targetModel,
         contents: {
             parts: [
                 { text: prompt },
                 {
                     inlineData: {
-                        mimeType: 'image/jpeg', // Standardize to jpeg for upload if possible, or source type
+                        mimeType: 'image/jpeg', // Standardize to jpeg for consistent processing
                         data: cleanBase64
                     }
                 }
             ]
-        }
+        },
+        // Optional configuration can be added here (e.g., aspectRatio)
     });
 
-    // Check for inlineData (Base64) in the response
-    // The model typically returns an image in parts if successful for image generation tasks
+    // The output response may contain both image and text parts; iterate through all parts to find the image part.
     for (const part of response.candidates?.[0]?.content?.parts || []) {
         if (part.inlineData) {
-            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
-        // Sometimes it might return a text refusal if the safety filter trips
-        if (part.text && !part.inlineData) {
-            console.warn("Model returned text instead of image:", part.text);
+            const base64EncodeString: string = part.inlineData.data;
+            const mimeType = part.inlineData.mimeType || 'image/png';
+            return `data:${mimeType};base64,${base64EncodeString}`;
+        } else if (part.text) {
+            console.debug("Model text response:", part.text);
         }
     }
 
-    throw new Error("No image generated. The model might have refused the request due to safety filters.");
+    throw new Error("No image generated. The model might have refused the request due to safety filters or reached its token limit.");
 };

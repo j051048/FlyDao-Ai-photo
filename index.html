@@ -2,10 +2,23 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>AI Photo Booth - Nano Banana Edition</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Quicksand', 'Noto Sans SC', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
 
@@ -14,12 +27,8 @@
             font-family: 'Quicksand', 'Noto Sans SC', sans-serif;
             -webkit-tap-highlight-color: transparent;
             transition: background-color 0.5s ease;
+            overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
         }
-        
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
         
         .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         .animate-pop { animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
@@ -33,7 +42,6 @@
             to { opacity: 1; transform: scale(1); }
         }
 
-        /* Glassmorphism for Nano Style */
         .nano-glass {
             background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(20px);
@@ -41,23 +49,56 @@
             border: 2px solid rgba(255, 255, 255, 0.8);
         }
 
-        /* Loading Pattern */
         .pattern-grid {
             background-image: radial-gradient(currentColor 1px, transparent 1px);
             background-size: 20px 20px;
         }
         
-        .cursor-wait {
-            cursor: wait;
+        /* HTML Loading spinner (Removed by React once mounted) */
+        #root:empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #FEF9C3;
         }
+        #root:empty::after {
+            content: "Loading Nano Banana OS...";
+            color: #78716c;
+            font-weight: bold;
+            font-family: sans-serif;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 50% { opacity: 0.5; } }
     </style>
+<script>
+    // Global Error Trap: Catch script errors before React mounts
+    window.onerror = function(msg, url, line, col, error) {
+        var root = document.getElementById('root');
+        if (root && root.innerHTML === '') {
+            root.style.display = 'block';
+            root.style.backgroundColor = '#FFF1F2';
+            root.style.padding = '20px';
+            root.style.color = '#881337';
+            root.innerHTML = '<div style="max-width:400px;margin:50px auto;text-align:center;font-family:sans-serif;"><h1>⚠️ Startup Error</h1><p>'+msg+'</p><pre style="background:#fff;padding:10px;text-align:left;overflow:auto;border-radius:8px;font-size:10px;margin-top:20px;">'+(error && error.stack ? error.stack : '')+'</pre></div>';
+        }
+    };
+
+    // Shim process object for browser environments
+    window.process = { env: { API_KEY: "", SUPABASE_URL: "", SUPABASE_ANON_KEY: "" } };
+</script>
 <script type="importmap">
 {
   "imports": {
-    "@google/genai": "https://esm.sh/@google/genai@^1.32.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
-    "react/": "https://esm.sh/react@^19.2.1/",
-    "react": "https://esm.sh/react@^19.2.1"
+    "react": "https://esm.sh/react@19.0.0",
+    "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?external=react,react-dom",
+    "@google/genai": "https://esm.sh/@google/genai@1.32.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.48.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
 </script>

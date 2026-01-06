@@ -39,6 +39,7 @@ export interface Profile {
     full_name: string | null;
     email: string | null;
     bio: string | null;
+    avatar_url: string | null;
     subscription_status: 'free' | 'pro';
 }
 
@@ -91,4 +92,8 @@ export interface Translation {
     saveProfile: string;
     backToDash: string;
     profileSaved: string;
+    changeAvatar: string;
+    uploading: string;
+    errorAvatarSize: string;
+    errorUploadFailed: string;
 }

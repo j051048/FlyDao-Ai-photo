@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { TRANSLATIONS } from '../constants';
@@ -14,11 +14,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user }) => {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [fullName, setFullName] = useState('');
     const [bio, setBio] = useState('');
-    const [lang, setLang] = useState<AppLanguage>('zh'); // You might want to pull this from a global context or storage
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [lang, setLang] = useState<AppLanguage>('zh'); 
     const [message, setMessage] = useState('');
     
+    const avatarInputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS[lang][key];
 
@@ -40,6 +43,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user }) => {
                     setProfile(data);
                     setFullName(data.full_name || '');
                     setBio(data.bio || '');
+                    setAvatarUrl(data.avatar_url);
                 } else {
                     // Initialize empty state if no profile exists yet
                     setFullName('');
@@ -62,7 +66,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user }) => {
             
             const updates = {
                 id: user.id,
-                email: user.email, // Ensure email is synced
+                email: user.email, 
                 full_name: fullName,
                 bio: bio,
                 updated_at: new Date(),
@@ -74,6 +78,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user }) => {
             
             setProfile({ 
                 ...updates, 
+                avatar_url: avatarUrl,
                 subscription_status: profile?.subscription_status || 'free' 
             } as Profile);
             
@@ -84,6 +89,67 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user }) => {
             setMessage('Error saving profile');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        try {
+            if (!event.target.files || event.target.files.length === 0) {
+                return;
+            }
+            const file = event.target.files[0];
+            
+            // Limit file size to 2MB
+            if (file.size > 2 * 1024 * 1024) {
+                alert(t('errorAvatarSize'));
+                return;
+            }
+
+            setUploadingAvatar(true);
+            
+            // Generate a unique file name
+            const fileExt = file.name.split('.').pop();
+            const fileName = `avatar-${user.id}-${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            // Upload to Supabase Storage 'avatars' bucket
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file);
+
+            if (uploadError) {
+                throw uploadError;
+            }
+
+            // Get public URL
+            const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+            const publicUrl = data.publicUrl;
+
+            // Update profile with new avatar URL
+            const updates = {
+                id: user.id,
+                avatar_url: publicUrl,
+                updated_at: new Date(),
+            };
+
+            const { error: updateError } = await supabase.from('profiles').upsert(updates);
+
+            if (updateError) {
+                throw updateError;
+            }
+
+            setAvatarUrl(publicUrl);
+            setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
+
+        } catch (error: any) {
+            console.error('Error uploading avatar:', error);
+            alert(t('errorUploadFailed'));
+        } finally {
+            setUploadingAvatar(false);
+            // Clear input
+            if (avatarInputRef.current) {
+                avatarInputRef.current.value = '';
+            }
         }
     };
 
@@ -119,9 +185,40 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user }) => {
                     <div className="space-y-6 relative">
                         {/* Avatar Section */}
                         <div className="flex flex-col items-center gap-3">
-                            <div className="w-24 h-24 bg-yellow-400 rounded-full flex items-center justify-center text-4xl shadow-lg border-4 border-white">
-                                {fullName ? fullName[0].toUpperCase() : user.email[0].toUpperCase()}
+                            <div 
+                                onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
+                                className="relative group cursor-pointer w-24 h-24 rounded-full flex items-center justify-center text-4xl shadow-lg border-4 border-white bg-yellow-400 overflow-hidden"
+                            >
+                                {uploadingAvatar ? (
+                                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center z-20">
+                                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Avatar Image or Initial */}
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-stone-800">
+                                                {fullName ? fullName[0].toUpperCase() : user.email[0].toUpperCase()}
+                                            </span>
+                                        )}
+                                        
+                                        {/* Hover Overlay */}
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Icons.Camera className="w-8 h-8 text-white opacity-80" />
+                                        </div>
+                                    </>
+                                )}
                             </div>
+                            <input 
+                                type="file" 
+                                ref={avatarInputRef} 
+                                onChange={handleAvatarUpload} 
+                                accept="image/png, image/jpeg, image/jpg" 
+                                className="hidden" 
+                            />
+                            
                             <div className="text-center">
                                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
                                     profile?.subscription_status === 'pro' 

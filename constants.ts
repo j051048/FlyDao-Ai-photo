@@ -48,6 +48,10 @@ export const TRANSLATIONS: Record<string, Translation> = {
         saveProfile: "保存资料",
         backToDash: "返回创作",
         profileSaved: "资料已更新 ✨",
+        changeAvatar: "更换头像",
+        uploading: "上传中...",
+        errorAvatarSize: "头像图片不能超过 2MB",
+        errorUploadFailed: "头像上传失败",
     },
     en: {
         appTitle: "AI Photo Booth",
@@ -95,6 +99,10 @@ export const TRANSLATIONS: Record<string, Translation> = {
         saveProfile: "Save Profile",
         backToDash: "Back to Studio",
         profileSaved: "Profile Updated ✨",
+        changeAvatar: "Change Avatar",
+        uploading: "Uploading...",
+        errorAvatarSize: "Avatar must be under 2MB",
+        errorUploadFailed: "Avatar upload failed",
     }
 };
 

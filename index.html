@@ -85,7 +85,7 @@
     };
 
     // Shim process object for browser environments with injected credentials
-    // UPDATED: Using NEXT_PUBLIC_ prefix to match Vercel/Next.js standards
+    // IMPORTANT: These values act as fallbacks if the build process doesn't inject environment variables
     window.process = { 
         env: { 
             API_KEY: "", 

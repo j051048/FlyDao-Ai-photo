@@ -1,38 +1,48 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Helper to safely access environment variables in various environments (Vite, Next.js, Raw HTML Shim)
-const getEnvVar = (key: string) => {
-    // 1. Try global window shim (Runtime) - This bypasses bundler replacement of "process.env"
-    if (typeof window !== 'undefined' && (window as any).process?.env?.[key]) {
-        return (window as any).process.env[key];
+/**
+ * 环境变量读取逻辑 (Vercel/Next.js/Vite 兼容版)
+ * 必须直接访问 process.env.NEXT_PUBLIC_... 属性，不能使用动态 key (process.env[key])，
+ * 否则打包工具在构建时无法执行静态替换，导致部署后变量为 undefined。
+ */
+const getEnv = () => {
+    let url = '';
+    let key = '';
+
+    // 1. 优先尝试直接访问 process.env (Vercel / Next.js 构建时替换)
+    // 注意：这里必须显式写出完整变量名，不能用变量拼接
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     }
-    // 2. Try standard process.env (Build time)
-    if (typeof process !== 'undefined' && process.env?.[key]) {
-        return process.env[key];
+    if (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     }
-    // 3. Try import.meta.env (Vite)
-    try {
+
+    // 2. 尝试 import.meta.env (Vite 构建环境)
+    // @ts-ignore
+    if (!url && typeof import.meta !== 'undefined' && import.meta.env) {
         // @ts-ignore
-        if (import.meta?.env?.[key]) {
-            // @ts-ignore
-            return import.meta.env[key];
-        }
-    } catch (e) { /* ignore */ }
-    
-    return '';
+        url = import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+        // @ts-ignore
+        key = import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    }
+
+    // 3. 最后尝试 window.process 垫片 (index.html 硬编码注入)
+    if (!url && typeof window !== 'undefined' && (window as any).process?.env) {
+        url = (window as any).process.env.NEXT_PUBLIC_SUPABASE_URL;
+        key = (window as any).process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    }
+
+    return { url, key };
 };
 
-// Retrieve keys with priority for NEXT_PUBLIC_ prefix
-const envUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL') || getEnvVar('SUPABASE_URL');
-const envKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') || getEnvVar('SUPABASE_ANON_KEY');
+const { url: envUrl, key: envKey } = getEnv();
 
-const defaultUrl = ''; 
-const defaultKey = '';
+// 默认值 (防止崩溃)
+const supabaseUrl = envUrl || '';
+const supabaseAnonKey = envKey || '';
 
-const supabaseUrl = (envUrl && envUrl.length > 0) ? envUrl : defaultUrl;
-const supabaseAnonKey = (envKey && envKey.length > 0) ? envKey : defaultKey;
-
-// Validate configuration strictly
+// 严格校验配置是否有效
 const isValidConfig = 
     supabaseUrl && 
     supabaseUrl.length > 0 && 
@@ -42,7 +52,8 @@ const isValidConfig =
 
 export const isSupabaseConfigured = !!isValidConfig;
 
-// Create client
+// 创建 Supabase 客户端
+// 如果配置无效，创建一个占位客户端，避免应用启动时直接报错白屏，而是允许 UI 层展示配置提示页
 export const supabase = isValidConfig 
     ? createClient(supabaseUrl, supabaseAnonKey)
     : createClient('https://placeholder.supabase.co', 'placeholder-key');

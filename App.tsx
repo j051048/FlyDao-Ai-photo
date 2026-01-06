@@ -24,9 +24,9 @@ const ConfigWarning = () => (
             <h1 className="text-2xl font-black text-rose-900">环境配置缺失</h1>
             <p className="text-rose-700 font-medium">应用需要 <b>NEXT_PUBLIC_SUPABASE_URL</b> 和 <b>NEXT_PUBLIC_SUPABASE_ANON_KEY</b> 才能运行。</p>
             <div className="p-4 bg-white/50 rounded-2xl text-left font-mono text-xs border border-rose-100 text-stone-600">
-                <p className="mb-2 font-bold text-rose-800">如何修复:</p>
-                1. 在 index.html 或 Vercel 环境变量中填入 Supabase Key<br/>
-                2. 变量名必须包含 NEXT_PUBLIC_ 前缀
+                <p className="mb-2 font-bold text-rose-800">可能的两个原因:</p>
+                1. Vercel 环境变量未添加 (Settings > Environment Variables)<br/>
+                2. 本地 index.html 中的 Key 未填写
             </div>
             <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" className="inline-block px-6 py-3 bg-rose-200 hover:bg-rose-300 text-rose-900 rounded-xl font-bold text-sm transition-colors">
                 前往 Supabase 获取 Key &rarr;
@@ -77,7 +77,15 @@ const LoginPage = () => {
     };
 
     const handleGoogleLogin = async () => {
-        const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+        // Fix for "Connection Refused": Explicitly tell Supabase to redirect back to CURRENT domain, not localhost
+        const redirectUrl = window.location.origin + '/dashboard'; 
+        
+        const { error } = await supabase.auth.signInWithOAuth({ 
+            provider: 'google',
+            options: {
+                redirectTo: redirectUrl
+            }
+        });
         if (error) setError(error.message);
     };
 
@@ -130,7 +138,13 @@ const SignupPage = () => {
         setLoading(true);
         setError('');
         try {
-            const { error } = await supabase.auth.signUp({ email, password });
+            const { error } = await supabase.auth.signUp({ 
+                email, 
+                password,
+                options: {
+                    emailRedirectTo: window.location.origin + '/dashboard'
+                }
+            });
             if (error) throw error;
             setSuccess(true);
         } catch (err: any) {

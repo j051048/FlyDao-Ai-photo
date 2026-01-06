@@ -25,7 +25,7 @@ const ConfigWarning = () => (
             <p className="text-rose-700 font-medium">应用需要 <b>NEXT_PUBLIC_SUPABASE_URL</b> 和 <b>NEXT_PUBLIC_SUPABASE_ANON_KEY</b> 才能运行。</p>
             <div className="p-4 bg-white/50 rounded-2xl text-left font-mono text-xs border border-rose-100 text-stone-600">
                 <p className="mb-2 font-bold text-rose-800">可能的两个原因:</p>
-                1. Vercel 环境变量未添加 (Settings > Environment Variables)<br/>
+                1. Vercel 环境变量未添加 (Settings &gt; Environment Variables)<br/>
                 2. 本地 index.html 中的 Key 未填写
             </div>
             <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" className="inline-block px-6 py-3 bg-rose-200 hover:bg-rose-300 text-rose-900 rounded-xl font-bold text-sm transition-colors">

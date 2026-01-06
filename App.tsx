@@ -215,10 +215,11 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const [error, setError] = useState<string>('');
     const [showSettings, setShowSettings] = useState<boolean>(false);
     
-    // Config State (LocalStorage persistence handled via useState initializers or effects)
+    // Config State
+    // Updated default base URL to include /v1
     const [model, setModel] = useState<string>(localStorage.getItem('api_model') || 'gemini-2.5-flash-image');
     const [apiKey, setApiKey] = useState<string>(localStorage.getItem('custom_api_key') || '123456');
-    const [baseUrl, setBaseUrl] = useState<string>(localStorage.getItem('custom_base_url') || 'https://proxy.flydao.top');
+    const [baseUrl, setBaseUrl] = useState<string>(localStorage.getItem('custom_base_url') || 'https://proxy.flydao.top/v1');
     
     // Testing State
     const [isTesting, setIsTesting] = useState(false);
@@ -306,26 +307,8 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
 
         await Promise.all(itemsToGen.map(async (item) => {
             try {
-                // Handle key selection for pro model (if not using custom proxy)
-                // If using custom proxy/key, we assume the user has access.
-                // Keeping logic: if user explicitly selects the "pro" model which usually requires oauth, 
-                // but has a custom key set, we might skip the oauth prompt? 
-                // For safety, if it's the exact Pro string and NO custom key is provided, we use the old flow.
-                // But here we rely on the custom key.
-                
-                if (model === 'gemini-3-pro-image-preview' && apiKey === '123456') {
-                     // If default dummy key, maybe trigger the OAuth flow? 
-                     // For now, let's just pass the config. The service will use the key provided.
-                     // If it fails, it fails.
-                     if (!(await (window as any).aistudio?.hasSelectedApiKey())) {
-                         try {
-                             await (window as any).aistudio?.openSelectKey();
-                         } catch (e) {
-                             // Ignore if not in that environment
-                         }
-                     }
-                }
-
+                // If using standard fetch with proxy, we skip client-side OAuth check
+                // because the proxy handles auth or key replacement.
                 const url = await generateImageWithGemini(item.prompt, sourceImage, model, config);
                 setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'success', imageUrl: url } : r));
             } catch (e: any) {

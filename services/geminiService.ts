@@ -1,56 +1,68 @@
 
-import { GoogleGenAI } from "@google/genai";
-
 export interface GenAIConfig {
     apiKey?: string;
     baseUrl?: string;
 }
 
 /**
- * Helper to initialize AI client with optional config
- */
-const getClient = (config?: GenAIConfig) => {
-    // If config provides keys, use them. Otherwise fallback to process.env (legacy/dev support)
-    const apiKey = config?.apiKey || process.env.API_KEY;
-    
-    // GoogleGenAI options allow passing baseUrl if needed for proxies
-    const options: any = { apiKey };
-    if (config?.baseUrl) {
-        options.baseUrl = config.baseUrl;
-    }
-    
-    return new GoogleGenAI(options);
-};
-
-/**
- * Generates an image using Gemini models.
+ * Generates an image using Gemini models via REST API fetch.
+ * Designed to work with proxies that might handle authentication server-side.
  */
 export const generateImageWithGemini = async (prompt: string, imageBase64: string, model: string = 'gemini-2.5-flash-image', config?: GenAIConfig): Promise<string> => {
-    const ai = getClient(config);
-    
-    const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-    const targetModel = model === 'nano-banana' ? 'gemini-2.5-flash-image' : model;
+    // Default config values
+    const apiKey = config?.apiKey || process.env.API_KEY || 'no-key';
+    const baseUrl = config?.baseUrl || 'https://proxy.flydao.top/v1';
 
-    const response = await ai.models.generateContent({
-        model: targetModel,
-        contents: {
+    // Handle Model Aliases
+    const targetModel = model === 'nano-banana' ? 'gemini-2.5-flash-image' : model;
+    
+    // Clean Base64 string
+    const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+
+    // Construct URL
+    // Ensure baseUrl doesn't have a trailing slash if we are appending /models...
+    // But usually proxies like standard OpenAI/Gemini format.
+    // Given the user instruction "proxy.flydao.top/v1", we append standard Gemini REST path.
+    // The standard path is /models/{model}:generateContent
+    const url = `${baseUrl.replace(/\/$/, '')}/models/${targetModel}:generateContent?key=${apiKey}`;
+
+    // Construct Body (Standard Gemini JSON REST Format)
+    const body = {
+        contents: [{
             parts: [
                 { text: prompt },
                 {
                     inlineData: {
-                        mimeType: 'image/jpeg',
+                        mimeType: "image/jpeg",
                         data: cleanBase64
                     }
                 }
             ]
+        }]
+    };
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
         },
+        body: JSON.stringify(body)
     });
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API Error ${response.status}: ${errText}`);
+    }
+
+    const data = await response.json();
+
+    // Parse Response to find Image
+    // Gemini 2.5/Pro models return image in inlineData
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    for (const part of parts) {
         if (part.inlineData) {
-            const base64EncodeString: string = part.inlineData.data;
             const mimeType = part.inlineData.mimeType || 'image/png';
-            return `data:${mimeType};base64,${base64EncodeString}`;
+            return `data:${mimeType};base64,${part.inlineData.data}`;
         } else if (part.text) {
             console.debug("Model text response:", part.text);
         }
@@ -63,17 +75,28 @@ export const generateImageWithGemini = async (prompt: string, imageBase64: strin
  * Tests the connection to the Gemini API (or Proxy).
  */
 export const testGeminiConnection = async (config: GenAIConfig, model: string): Promise<string> => {
-    const ai = getClient(config);
+    const apiKey = config?.apiKey || 'no-key';
+    const baseUrl = config?.baseUrl || 'https://proxy.flydao.top/v1';
     const targetModel = model === 'nano-banana' ? 'gemini-2.5-flash-image' : model;
-    
-    // We send a very simple text prompt to check connectivity
-    const response = await ai.models.generateContent({
-        model: targetModel,
-        contents: { parts: [{ text: "Hello, reply with 'OK' if you receive this." }] },
-        config: {
-            maxOutputTokens: 10
-        }
+
+    const url = `${baseUrl.replace(/\/$/, '')}/models/${targetModel}:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: "Hello, reply with 'OK'." }] }],
+            // Use generationConfig for REST API (SDK uses 'config' but maps it)
+            generationConfig: { maxOutputTokens: 10 } 
+        })
     });
 
-    return response.text || "No text response received, but connection seems established.";
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errText}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    return text || "Connection established (No text response)";
 };

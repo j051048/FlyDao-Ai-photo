@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Use process.env if available (from build time or shim), otherwise fallback to hardcoded strings
-// This dual-check ensures it works in both local development and bundled environments
-const envUrl = process.env.SUPABASE_URL;
-const envKey = process.env.SUPABASE_ANON_KEY;
+// Adhering to Vercel/Next.js standards for client-side environment variables.
+// Prioritize NEXT_PUBLIC_ prefix, but fallback to standard names for compatibility with other environments.
+const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
-// User must provide valid Supabase credentials via environment variables (index.html shim or build env)
-// We remove invalid hardcoded placeholders to allow the "ConfigWarning" screen to trigger correctly.
+// User must provide valid Supabase credentials via environment variables
 const defaultUrl = ''; 
 const defaultKey = '';
 

@@ -84,8 +84,15 @@
         }
     };
 
-    // Shim process object for browser environments
-    window.process = { env: { API_KEY: "", SUPABASE_URL: "", SUPABASE_ANON_KEY: "" } };
+    // Shim process object for browser environments with injected credentials
+    // UPDATED: Using NEXT_PUBLIC_ prefix to match Vercel/Next.js standards
+    window.process = { 
+        env: { 
+            API_KEY: "", 
+            NEXT_PUBLIC_SUPABASE_URL: "https://ogfzseepxjzqwqznfnik.supabase.co", 
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_jvDntvuh9jGMZ_-wiO-ICw_AdVzmz_z" 
+        } 
+    };
 </script>
 <script type="importmap">
 {

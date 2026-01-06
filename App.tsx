@@ -22,11 +22,11 @@ const ConfigWarning = () => (
         <div className="max-w-md space-y-4">
             <div className="text-5xl">🚧</div>
             <h1 className="text-2xl font-black text-rose-900">环境配置缺失</h1>
-            <p className="text-rose-700 font-medium">应用需要 <b>SUPABASE_URL</b> 和 <b>SUPABASE_ANON_KEY</b> 才能运行。</p>
+            <p className="text-rose-700 font-medium">应用需要 <b>NEXT_PUBLIC_SUPABASE_URL</b> 和 <b>NEXT_PUBLIC_SUPABASE_ANON_KEY</b> 才能运行。</p>
             <div className="p-4 bg-white/50 rounded-2xl text-left font-mono text-xs border border-rose-100 text-stone-600">
                 <p className="mb-2 font-bold text-rose-800">如何修复:</p>
                 1. 在 index.html 或 Vercel 环境变量中填入 Supabase Key<br/>
-                2. 或在 lib/supabase.ts 中配置 defaultUrl/defaultKey
+                2. 变量名必须包含 NEXT_PUBLIC_ 前缀
             </div>
             <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" className="inline-block px-6 py-3 bg-rose-200 hover:bg-rose-300 text-rose-900 rounded-xl font-bold text-sm transition-colors">
                 前往 Supabase 获取 Key &rarr;

@@ -77,13 +77,19 @@ const LoginPage = () => {
     };
 
     const handleGoogleLogin = async () => {
-        // Fix for "Connection Refused": Explicitly tell Supabase to redirect back to CURRENT domain, not localhost
-        const redirectUrl = window.location.origin + '/dashboard'; 
+        // 使用 window.location.origin (根路径) 作为回调地址
+        // 这要求你在 Supabase Dashboard -> Auth -> URL Configuration -> Redirect URLs 中添加你的 Vercel 域名
+        // 例如: https://your-project.vercel.app
+        const redirectUrl = window.location.origin; 
         
         const { error } = await supabase.auth.signInWithOAuth({ 
             provider: 'google',
             options: {
-                redirectTo: redirectUrl
+                redirectTo: redirectUrl,
+                queryParams: {
+                    access_type: 'offline',
+                    prompt: 'consent',
+                },
             }
         });
         if (error) setError(error.message);
@@ -142,7 +148,8 @@ const SignupPage = () => {
                 email, 
                 password,
                 options: {
-                    emailRedirectTo: window.location.origin + '/dashboard'
+                    // 同样使用根路径，Supabase 会发送确认邮件
+                    emailRedirectTo: window.location.origin
                 }
             });
             if (error) throw error;

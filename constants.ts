@@ -69,6 +69,13 @@ export const TRANSLATIONS: Record<string, Translation> = {
         returnHome: "开始创作",
         paymentCancelTitle: "订阅未完成",
         paymentCancelDesc: "您似乎取消了支付流程。如有疑问请联系支持。",
+        // Edit & Actions
+        retry: "重试",
+        edit: "微调",
+        editTitle: "AI 视觉微调",
+        editPlaceholder: "例如：把头发改成银色，增加一些赛博朋克霓虹光...",
+        applyEdit: "执行修改",
+        cancel: "取消",
     },
     en: {
         appTitle: "Nano Banana",
@@ -136,6 +143,13 @@ export const TRANSLATIONS: Record<string, Translation> = {
         returnHome: "Start Creating",
         paymentCancelTitle: "Payment Cancelled",
         paymentCancelDesc: "You cancelled the payment process. Contact support if needed.",
+        // Edit & Actions
+        retry: "Retry",
+        edit: "Refine",
+        editTitle: "AI Refinement",
+        editPlaceholder: "E.g., Change hair color to silver, add cyberpunk neon lights...",
+        applyEdit: "Apply Changes",
+        cancel: "Cancel",
     }
 };
 

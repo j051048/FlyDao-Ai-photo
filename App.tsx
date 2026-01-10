@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Theme, ResultItem, AppLanguage, GenerationMode } from './types';
 import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
-import { generateImageWithGemini, testGeminiConnection } from './services/geminiService';
+import { generateImageWithGemini } from './services/geminiService';
 import { ProfilePage } from './components/ProfilePage';
 import { SubscribePage, PaymentSuccessPage, PaymentCancelPage } from './components/SubscribePage';
 
@@ -267,14 +266,12 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const [error, setError] = useState<string>('');
     const [showSettings, setShowSettings] = useState<boolean>(false);
     
+    // Edit Mode State
+    const [editingItem, setEditingItem] = useState<ResultItem | null>(null);
+    const [editPrompt, setEditPrompt] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
+
     const [model, setModel] = useState<string>(localStorage.getItem('api_model') || 'gemini-2.5-flash-image');
-    const [apiKey, setApiKey] = useState<string>(localStorage.getItem('custom_api_key') || '123456');
-    const [baseUrl, setBaseUrl] = useState<string>(localStorage.getItem('custom_base_url') || 'https://proxy.flydao.top/v1');
-    
-    // Test connection state
-    const [isTesting, setIsTesting] = useState(false);
-    const [testLogs, setTestLogs] = useState<string[]>([]);
-    const logsEndRef = useRef<HTMLDivElement>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
@@ -283,27 +280,9 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const theme = THEMES[currentTheme] || THEMES.banana;
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS[lang][key];
 
-    useEffect(() => { logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [testLogs]);
-
     const handleSaveSettings = () => {
         localStorage.setItem('api_model', model);
-        localStorage.setItem('custom_api_key', apiKey);
-        localStorage.setItem('custom_base_url', baseUrl);
         setShowSettings(false);
-    };
-
-    const handleTestConnection = async () => {
-        setIsTesting(true);
-        setTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Ping: ${baseUrl}`]);
-        try {
-            const config = { apiKey, baseUrl };
-            const result = await testGeminiConnection(config, model);
-            setTestLogs(prev => [...prev, `✅ ${result}`]);
-        } catch (err: any) {
-            setTestLogs(prev => [...prev, `❌ ${err.message}`]);
-        } finally {
-            setIsTesting(false);
-        }
     };
 
     const handleLogout = async () => supabase.auth.signOut();
@@ -324,6 +303,21 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
         }
     };
 
+    const runGeneration = async (item: ResultItem, source: string, promptOverride?: string) => {
+        try {
+            // If editing, we use the user's refine instruction. If generating, use the preset/custom prompt.
+            const promptToUse = promptOverride || item.prompt;
+            
+            const url = await generateImageWithGemini(promptToUse, source, model);
+            
+            setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'success', imageUrl: url } : r));
+        } catch (e: any) {
+            console.error(e);
+            setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'error' } : r));
+            setError(e.message || t('errorGenFailed'));
+        }
+    };
+
     const handleGenerate = async () => {
         if (!sourceImage) return;
         setIsGlobalGenerating(true);
@@ -340,19 +334,46 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
             setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
 
-        const config = { apiKey, baseUrl };
-
-        await Promise.all(itemsToGen.map(async (item) => {
-            try {
-                const url = await generateImageWithGemini(item.prompt, sourceImage, model, config);
-                setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'success', imageUrl: url } : r));
-            } catch (e: any) {
-                console.error(e);
-                setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'error' } : r));
-                setError(e.message || t('errorGenFailed'));
-            }
-        }));
+        await Promise.all(itemsToGen.map(item => runGeneration(item, sourceImage)));
         setIsGlobalGenerating(false);
+    };
+
+    // Retry a failed item using the ORIGINAL source image
+    const handleRetry = async (item: ResultItem) => {
+        if (!sourceImage) return; // Should allow retry if source exists
+        
+        // Reset item to loading
+        setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'loading' } : r));
+        
+        // Re-run with original params
+        await runGeneration(item, sourceImage);
+    };
+
+    // Open Edit Modal
+    const handleOpenEdit = (item: ResultItem) => {
+        setEditingItem(item);
+        setEditPrompt('');
+    };
+
+    // Submit Edit
+    const handleSubmitEdit = async () => {
+        if (!editingItem || !editingItem.imageUrl || !editPrompt) return;
+        
+        setIsEditing(true);
+        
+        // Use the GENERATED image as the source for the refinement
+        // NOTE: The imageUrl is a Data URL, so it's ready to pass to our service
+        const imageSourceForEdit = editingItem.imageUrl;
+
+        // Update UI to show loading on that specific card
+        setResults(prev => prev.map(r => r.id === editingItem.id ? { ...r, status: 'loading' } : r));
+        setEditingItem(null); // Close modal immediately
+
+        try {
+            await runGeneration(editingItem, imageSourceForEdit, editPrompt);
+        } finally {
+            setIsEditing(false);
+        }
     };
 
     return (
@@ -465,19 +486,58 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                                     </div>
                                 )}
                                 {item.status === 'success' && (
-                                    <div className="relative w-full h-full group-hover:scale-[1.02] transition-transform duration-500">
+                                    <div className="relative w-full h-full">
                                         <img src={item.imageUrl} className="w-full h-full object-cover" alt={item.title} />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
-                                            <a href={item.imageUrl} download={`nano-banana-${item.title}.png`} className="w-full py-3 bg-white text-black text-xs font-bold rounded-lg text-center hover:bg-yellow-400 transition-colors">
-                                                {t('save')}
-                                            </a>
+                                        
+                                        {/* Actions Overlay */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6 gap-3">
+                                            
+                                            {/* Action Bar */}
+                                            <div className="flex items-center gap-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                                                 <button 
+                                                    onClick={() => handleRetry(item)} 
+                                                    className="p-3 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white shadow-lg transition-all active:scale-95"
+                                                    title={t('tryAgain')}
+                                                >
+                                                    <Icons.Refresh className="w-5 h-5" />
+                                                </button>
+                                                
+                                                <button 
+                                                    onClick={() => handleOpenEdit(item)}
+                                                    className="flex-1 py-3 px-4 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+                                                >
+                                                    <Icons.PenTool className="w-4 h-4" />
+                                                    <span>{t('edit')}</span>
+                                                </button>
+
+                                                <a 
+                                                    href={item.imageUrl} 
+                                                    download={`nano-banana-${item.title}.png`} 
+                                                    className="p-3 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg shadow-yellow-500/20 transition-all active:scale-95"
+                                                    title={t('save')}
+                                                >
+                                                    <Icons.Download className="w-5 h-5" />
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
                                 {item.status === 'error' && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 space-y-2 p-4 text-center">
-                                        <Icons.X className="w-8 h-8" />
-                                        <span className="text-xs font-mono uppercase">{t('failed')}</span>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 space-y-4 p-4 text-center">
+                                        <div className="bg-red-500/10 p-4 rounded-full">
+                                            <Icons.X className="w-8 h-8" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <span className="block text-xs font-mono uppercase">{t('failed')}</span>
+                                            <span className="block text-[10px] text-red-400/70">Network or Filter Error</span>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleRetry(item)}
+                                            className="px-6 py-2 rounded-lg bg-surfaceHighlight border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors text-xs font-bold flex items-center gap-2"
+                                        >
+                                            <Icons.Refresh className="w-3 h-3" />
+                                            {t('retry')}
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -486,7 +546,62 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                 </div>
             </main>
 
-            {/* Settings Modal (Simplified for XML) */}
+            {/* Edit Modal */}
+            {editingItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="glass-panel w-full max-w-lg rounded-3xl p-6 space-y-6 relative border border-border shadow-2xl animate-pop">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-yellow-500/10 rounded-lg text-yellow-500">
+                                    <Icons.PenTool className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-textMain">{t('editTitle')}</h3>
+                                    <p className="text-[10px] text-textMuted uppercase tracking-widest">{editingItem.title}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setEditingItem(null)} className="p-2 hover:bg-surfaceHighlight rounded-full text-textMain"><Icons.X /></button>
+                        </div>
+
+                        <div className="relative aspect-[16/9] w-full bg-black/50 rounded-xl overflow-hidden border border-border">
+                            {editingItem.imageUrl && (
+                                <img src={editingItem.imageUrl} className="w-full h-full object-cover opacity-50" alt="Preview" />
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <p className="text-white/50 text-xs font-mono">ORIGINAL SOURCE</p>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <textarea 
+                                value={editPrompt} 
+                                onChange={(e) => setEditPrompt(e.target.value)}
+                                placeholder={t('editPlaceholder')}
+                                className="w-full bg-surfaceHighlight/50 border border-border rounded-xl px-4 py-4 focus:outline-none focus:border-yellow-500/50 text-sm leading-relaxed resize-none h-28 placeholder-textMuted text-textMain"
+                                autoFocus
+                            />
+                            
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={() => setEditingItem(null)}
+                                    className="flex-1 py-3 rounded-xl bg-surfaceHighlight border border-border text-textMuted font-bold text-sm hover:bg-surface"
+                                >
+                                    {t('cancel')}
+                                </button>
+                                <button 
+                                    onClick={handleSubmitEdit}
+                                    disabled={!editPrompt.trim()}
+                                    className="flex-1 py-3 rounded-xl bg-textMain text-background font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                                >
+                                    {t('applyEdit')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Settings Modal (Simplified) */}
             {showSettings && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6 animate-fade-in">
                     <div className="glass-panel w-full max-w-md rounded-3xl p-6 space-y-6 relative border border-border">
@@ -502,19 +617,6 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                                     {MODEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                 </select>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-textMuted uppercase">API Key</label>
-                                <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} className="w-full p-3 rounded-xl bg-surfaceHighlight border border-border text-sm focus:border-yellow-500/50 outline-none text-textMain font-mono" />
-                            </div>
-                            <button onClick={handleTestConnection} disabled={isTesting} className="w-full py-3 rounded-xl bg-surfaceHighlight border border-border text-textMuted text-sm font-bold hover:bg-surface">
-                                {isTesting ? 'Pinging...' : t('testConnection')}
-                            </button>
-                            {testLogs.length > 0 && (
-                                <div className="h-32 bg-surfaceHighlight rounded-lg p-3 overflow-y-auto font-mono text-[10px] text-green-400 border border-border">
-                                    {testLogs.map((log, i) => <div key={i}>{log}</div>)}
-                                    <div ref={logsEndRef} />
-                                </div>
-                            )}
                         </div>
                         <button onClick={handleSaveSettings} className="w-full py-3 rounded-xl bg-textMain text-background font-bold text-sm hover:opacity-90 transition-opacity">{t('saveChanges')}</button>
                     </div>
@@ -533,14 +635,20 @@ const App = () => {
             setLoading(false);
             return;
         }
+
+        // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setLoading(false);
         });
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+
+        // Listen for auth changes
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
-            setLoading(false);
         });
+
         return () => subscription.unsubscribe();
     }, []);
 
@@ -549,14 +657,18 @@ const App = () => {
 
     return (
         <Routes>
-            <Route path="/login" element={session ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
-            <Route path="/signup" element={session ? <Navigate to="/dashboard" replace /> : <SignupPage />} />
-            <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" replace />} />
-            <Route path="/profile" element={session ? <ProfilePage user={session.user} /> : <Navigate to="/login" replace />} />
-            <Route path="/subscribe" element={session ? <SubscribePage user={session.user} /> : <Navigate to="/login" replace />} />
+            <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/dashboard" />} />
+            <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/dashboard" />} />
+            
+            <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" />} />
+            <Route path="/profile" element={session ? <ProfilePage user={session.user} /> : <Navigate to="/login" />} />
+            
+            <Route path="/subscribe" element={session ? <SubscribePage user={session.user} /> : <Navigate to="/login" />} />
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
             <Route path="/payment/cancel" element={<PaymentCancelPage />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+            <Route path="/" element={<Navigate to={session ? "/dashboard" : "/login"} />} />
+            <Route path="*" element={<Navigate to="/" />} />
         </Routes>
     );
 };

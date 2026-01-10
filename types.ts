@@ -112,4 +112,11 @@ export interface Translation {
     returnHome: string;
     paymentCancelTitle: string;
     paymentCancelDesc: string;
+    // Edit & Actions
+    retry: string;
+    edit: string;
+    editTitle: string;
+    editPlaceholder: string;
+    applyEdit: string;
+    cancel: string;
 }

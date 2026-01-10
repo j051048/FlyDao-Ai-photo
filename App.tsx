@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
-import { Theme, ResultItem, Config, AppLanguage, GenerationMode } from './types';
+import { Theme, ResultItem, AppLanguage, GenerationMode } from './types';
 import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
 import { generateImageWithGemini, testGeminiConnection } from './services/geminiService';
@@ -12,27 +12,33 @@ import { SubscribePage, PaymentSuccessPage, PaymentCancelPage } from './componen
 // --- Global UI Components ---
 
 const LoadingScreen = () => (
-    <div className="min-h-screen bg-[#FEF9C3] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-            <p className="text-stone-500 font-bold animate-pulse text-sm">Nano Banana OS is booting...</p>
+    <div className="min-h-screen bg-[#09090b] flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-900/20 via-transparent to-transparent opacity-50"></div>
+        <div className="flex flex-col items-center gap-6 relative z-10">
+            <div className="w-16 h-16 border-2 border-white/10 border-t-yellow-500 rounded-full animate-spin" />
+            <div className="flex flex-col items-center gap-1">
+                <p className="text-white font-mono font-bold tracking-[0.2em] text-xs">SYSTEM BOOT</p>
+                <p className="text-zinc-500 text-[10px] font-mono">Initializing Nano Banana OS...</p>
+            </div>
         </div>
     </div>
 );
 
 const ConfigWarning = () => (
-    <div className="min-h-screen bg-rose-50 flex items-center justify-center p-6 text-center">
-        <div className="max-w-md space-y-4">
-            <div className="text-5xl">🚧</div>
-            <h1 className="text-2xl font-black text-rose-900">环境配置缺失</h1>
-            <p className="text-rose-700 font-medium">应用需要 <b>NEXT_PUBLIC_SUPABASE_URL</b> 和 <b>NEXT_PUBLIC_SUPABASE_ANON_KEY</b> 才能运行。</p>
-            <div className="p-4 bg-white/50 rounded-2xl text-left font-mono text-xs border border-rose-100 text-stone-600">
-                <p className="mb-2 font-bold text-rose-800">可能的两个原因:</p>
-                1. Vercel 环境变量未添加 (Settings &gt; Environment Variables)<br/>
-                2. 本地 index.html 中的 Key 未填写
+    <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6 text-center">
+        <div className="glass-panel p-8 rounded-2xl max-w-md w-full space-y-6 border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.1)]">
+            <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500 text-2xl">⚡️</div>
+            <div className="space-y-2">
+                <h1 className="text-xl font-bold text-white">Environment Error</h1>
+                <p className="text-zinc-400 text-sm">Application keys are missing.</p>
             </div>
-            <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" className="inline-block px-6 py-3 bg-rose-200 hover:bg-rose-300 text-rose-900 rounded-xl font-bold text-sm transition-colors">
-                前往 Supabase 获取 Key &rarr;
+            <div className="p-4 bg-black/40 rounded-lg text-left font-mono text-[10px] border border-white/5 text-zinc-500">
+                <p className="text-red-400 mb-2 font-bold">MISSING_VARS:</p>
+                NEXT_PUBLIC_SUPABASE_URL<br/>
+                NEXT_PUBLIC_SUPABASE_ANON_KEY
+            </div>
+            <a href="https://supabase.com/dashboard" target="_blank" className="block w-full py-3 bg-white text-black font-bold rounded-lg text-sm hover:bg-zinc-200 transition-colors">
+                Open Console
             </a>
         </div>
     </div>
@@ -42,13 +48,13 @@ const ConfigWarning = () => (
 
 const AuthLayout = ({ children, title }: { children?: React.ReactNode, title: string }) => {
     return (
-        <div className="min-h-screen bg-[#FEF9C3] flex items-center justify-center p-4">
-            <div className="w-full max-w-md animate-pop">
-                <div className="nano-glass rounded-[2.5rem] p-8 shadow-2xl space-y-6">
-                    <div className="text-center space-y-2">
-                        <div className="w-16 h-16 bg-yellow-400 rounded-3xl flex items-center justify-center text-3xl mx-auto shadow-lg rotate-3 mb-4">🍌</div>
-                        <h1 className="text-3xl font-black text-stone-800 tracking-tight">{title}</h1>
-                        <p className="text-stone-500 font-medium text-sm">Welcome to Nano Banana OS</p>
+        <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+            <div className="w-full max-w-md animate-slide-up">
+                <div className="glass-panel rounded-3xl p-8 md:p-10 space-y-8">
+                    <div className="text-center space-y-3">
+                        <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-[0_0_20px_rgba(234,179,8,0.4)] rotate-3">🍌</div>
+                        <h1 className="text-2xl font-bold text-white tracking-tight">{title}</h1>
+                        <p className="text-zinc-500 font-medium text-xs tracking-widest uppercase">Nano Banana Studio</p>
                     </div>
                     {children}
                 </div>
@@ -62,8 +68,7 @@ const LoginPage = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const navigate = useNavigate();
-
+    
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -71,7 +76,6 @@ const LoginPage = () => {
         try {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
-            // Navigation handled by AuthStateChange in App component
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -79,57 +83,29 @@ const LoginPage = () => {
         }
     };
 
-    const handleGoogleLogin = async () => {
-        // 使用 window.location.origin (根路径) 作为回调地址
-        // 这要求你在 Supabase Dashboard -> Auth -> URL Configuration -> Redirect URLs 中添加你的 Vercel 域名
-        // 例如: https://your-project.vercel.app
-        const redirectUrl = window.location.origin; 
-        
-        const { error } = await supabase.auth.signInWithOAuth({ 
-            provider: 'google',
-            options: {
-                redirectTo: redirectUrl,
-                queryParams: {
-                    access_type: 'offline',
-                    prompt: 'consent',
-                },
-            }
-        });
-        if (error) setError(error.message);
-    };
-
     return (
-        <AuthLayout title="登入写真馆">
+        <AuthLayout title="Studio Login">
             <form onSubmit={handleEmailLogin} className="space-y-4">
                 <input 
                     type="email" placeholder="Email" required
-                    className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-yellow-400 focus:outline-none transition-all font-medium"
+                    className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white placeholder-zinc-600 focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 focus:outline-none transition-all"
                     value={email} onChange={e => setEmail(e.target.value)}
                 />
                 <input 
                     type="password" placeholder="Password" required
-                    className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-yellow-400 focus:outline-none transition-all font-medium"
+                    className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white placeholder-zinc-600 focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 focus:outline-none transition-all"
                     value={password} onChange={e => setPassword(e.target.value)}
                 />
                 <button 
                     disabled={loading}
-                    className="w-full py-4 bg-yellow-400 hover:bg-yellow-500 text-stone-800 font-bold rounded-2xl shadow-lg transition-all active:scale-95 flex justify-center items-center"
+                    className="w-full py-4 bg-white text-black font-bold rounded-xl shadow-lg shadow-white/5 hover:bg-zinc-200 transition-all active:scale-95 flex justify-center items-center"
                 >
-                    {loading ? <div className="w-5 h-5 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" /> : '登录'}
+                    {loading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : 'Enter Studio'}
                 </button>
             </form>
-            <div className="relative flex items-center py-2">
-                <div className="flex-grow border-t border-stone-200"></div>
-                <span className="flex-shrink mx-4 text-stone-400 text-xs font-bold uppercase tracking-widest">OR</span>
-                <div className="flex-grow border-t border-stone-200"></div>
-            </div>
-            <button onClick={handleGoogleLogin} className="w-full py-4 bg-white border-2 border-stone-100 hover:bg-stone-50 text-stone-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
-                Google 登录
-            </button>
-            {error && <p className="text-red-500 text-xs font-bold text-center mt-2">🚨 {error}</p>}
-            <p className="text-center text-sm text-stone-500 font-medium">
-                没有账号? <Link to="/signup" className="text-yellow-600 font-bold hover:underline">立即注册</Link>
+            {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+            <p className="text-center text-sm text-zinc-500">
+                New here? <Link to="/signup" className="text-white hover:underline decoration-yellow-500">Create Account</Link>
             </p>
         </AuthLayout>
     );
@@ -150,10 +126,7 @@ const SignupPage = () => {
             const { error } = await supabase.auth.signUp({ 
                 email, 
                 password,
-                options: {
-                    // 同样使用根路径，Supabase 会发送确认邮件
-                    emailRedirectTo: window.location.origin
-                }
+                options: { emailRedirectTo: window.location.origin }
             });
             if (error) throw error;
             setSuccess(true);
@@ -166,38 +139,38 @@ const SignupPage = () => {
 
     if (success) {
         return (
-            <AuthLayout title="注册成功">
+            <AuthLayout title="Verify Email">
                 <div className="text-center space-y-4">
-                    <p className="text-stone-600 font-medium">请检查您的邮箱以完成验证。</p>
-                    <Link to="/login" className="block w-full py-4 bg-yellow-400 text-stone-800 font-bold rounded-2xl">返回登录</Link>
+                    <p className="text-zinc-300">Verification link sent to your inbox.</p>
+                    <Link to="/login" className="block w-full py-3 bg-white/10 border border-white/10 text-white font-bold rounded-xl hover:bg-white/20">Return to Login</Link>
                 </div>
             </AuthLayout>
         );
     }
 
     return (
-        <AuthLayout title="创建新账号">
+        <AuthLayout title="Join Studio">
             <form onSubmit={handleSignup} className="space-y-4">
                 <input 
                     type="email" placeholder="Email" required
-                    className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-yellow-400 focus:outline-none font-medium"
+                    className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white placeholder-zinc-600 focus:border-yellow-500/50 focus:outline-none transition-all"
                     value={email} onChange={e => setEmail(e.target.value)}
                 />
                 <input 
                     type="password" placeholder="Password (min 6 chars)" required minLength={6}
-                    className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-transparent focus:border-yellow-400 focus:outline-none font-medium"
+                    className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white placeholder-zinc-600 focus:border-yellow-500/50 focus:outline-none transition-all"
                     value={password} onChange={e => setPassword(e.target.value)}
                 />
                 <button 
                     disabled={loading}
-                    className="w-full py-4 bg-yellow-400 text-stone-800 font-bold rounded-2xl shadow-lg transition-all active:scale-95 flex justify-center items-center"
+                    className="w-full py-4 bg-white text-black font-bold rounded-xl shadow-lg transition-all active:scale-95 flex justify-center items-center"
                 >
-                    {loading ? <div className="w-5 h-5 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" /> : '注册'}
+                    {loading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : 'Create ID'}
                 </button>
             </form>
-            {error && <p className="text-red-500 text-xs font-bold text-center mt-2">🚨 {error}</p>}
-            <p className="text-center text-sm text-stone-500 font-medium">
-                已有账号? <Link to="/login" className="text-yellow-600 font-bold hover:underline">去登录</Link>
+            {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+            <p className="text-center text-sm text-zinc-500">
+                Have account? <Link to="/login" className="text-white hover:underline decoration-yellow-500">Login</Link>
             </p>
         </AuthLayout>
     );
@@ -216,28 +189,23 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const [error, setError] = useState<string>('');
     const [showSettings, setShowSettings] = useState<boolean>(false);
     
-    // Config State
-    // Updated default base URL to include /v1
     const [model, setModel] = useState<string>(localStorage.getItem('api_model') || 'gemini-2.5-flash-image');
     const [apiKey, setApiKey] = useState<string>(localStorage.getItem('custom_api_key') || '123456');
     const [baseUrl, setBaseUrl] = useState<string>(localStorage.getItem('custom_base_url') || 'https://proxy.flydao.top/v1');
     
-    // Testing State
+    // Test connection state
     const [isTesting, setIsTesting] = useState(false);
     const [testLogs, setTestLogs] = useState<string[]>([]);
+    const logsEndRef = useRef<HTMLDivElement>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
-    const logsEndRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     
     const theme = THEMES[currentTheme] || THEMES.banana;
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS[lang][key];
 
-    // Scroll logs to bottom
-    useEffect(() => {
-        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [testLogs]);
+    useEffect(() => { logsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [testLogs]);
 
     const handleSaveSettings = () => {
         localStorage.setItem('api_model', model);
@@ -248,33 +216,19 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
 
     const handleTestConnection = async () => {
         setIsTesting(true);
-        setTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Starting test...`]);
-        setTestLogs(prev => [...prev, `> Model: ${model}`]);
-        setTestLogs(prev => [...prev, `> Base URL: ${baseUrl}`]);
-        
+        setTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Ping: ${baseUrl}`]);
         try {
             const config = { apiKey, baseUrl };
             const result = await testGeminiConnection(config, model);
-            setTestLogs(prev => [...prev, `✅ SUCCESS: ${result}`]);
+            setTestLogs(prev => [...prev, `✅ ${result}`]);
         } catch (err: any) {
-            console.error(err);
-            setTestLogs(prev => [...prev, `❌ ERROR: ${err.message}`]);
-            if (err.cause) {
-                 setTestLogs(prev => [...prev, `Caused by: ${JSON.stringify(err.cause)}`]);
-            }
+            setTestLogs(prev => [...prev, `❌ ${err.message}`]);
         } finally {
             setIsTesting(false);
         }
     };
 
-    const handleLogout = async () => {
-        try {
-            await supabase.auth.signOut();
-            // Auth state listener in App will handle navigation
-        } catch (error) {
-            console.error('Error logging out:', error);
-        }
-    };
+    const handleLogout = async () => supabase.auth.signOut();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -302,14 +256,16 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
             : STYLES.map(s => ({ ...s, status: 'loading' as const }));
         
         setResults(itemsToGen);
-        setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        
+        // Mobile scroll to results
+        if (window.innerWidth < 768) {
+            setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }
 
         const config = { apiKey, baseUrl };
 
         await Promise.all(itemsToGen.map(async (item) => {
             try {
-                // If using standard fetch with proxy, we skip client-side OAuth check
-                // because the proxy handles auth or key replacement.
                 const url = await generateImageWithGemini(item.prompt, sourceImage, model, config);
                 setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'success', imageUrl: url } : r));
             } catch (e: any) {
@@ -322,155 +278,166 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     };
 
     return (
-        <div className={`min-h-screen transition-colors duration-700 ${theme.bg} ${theme.text} pb-20`}>
-            <nav className="sticky top-0 z-40 px-6 py-4">
-                <div className="nano-glass rounded-full px-6 py-3 flex items-center justify-between shadow-lg max-w-5xl mx-auto">
-                    <Link to="/profile" className="flex items-center gap-3 hover:opacity-70 transition-opacity">
-                        <div className={`w-10 h-10 rounded-full ${theme.primary} flex items-center justify-center text-white text-xl shadow-inner`}>{theme.emoji}</div>
-                        <div className="hidden sm:block">
-                            <h1 className="font-bold text-lg leading-none">{t('appTitle')}</h1>
-                            <span className="text-[10px] font-bold opacity-60 uppercase">{user.email}</span>
+        <div className={`min-h-screen text-zinc-100 flex flex-col md:flex-row relative z-10 overflow-hidden`}>
+            
+            {/* --- Left Panel: Controls (Glass Sidebar on Desktop) --- */}
+            <aside className="w-full md:w-[480px] md:h-screen md:sticky md:top-0 p-6 flex flex-col gap-6 md:border-r border-white/5 bg-black/20 backdrop-blur-md overflow-y-auto no-scrollbar z-20">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <Link to="/profile" className="flex items-center gap-3 group">
+                        <div className="w-10 h-10 rounded-xl bg-yellow-500 flex items-center justify-center text-black text-xl shadow-[0_0_15px_rgba(234,179,8,0.3)] group-hover:scale-105 transition-transform">🍌</div>
+                        <div>
+                            <h1 className="font-bold text-lg leading-none tracking-tight">Nano Banana</h1>
+                            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">{user.email.split('@')[0]}</span>
                         </div>
                     </Link>
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="px-3 py-1.5 rounded-full bg-white/50 hover:bg-white text-xs font-bold border border-white/50 transition-colors">{lang === 'zh' ? 'EN' : '中'}</button>
-                        <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-full hover:bg-black/5" aria-label="Settings"><Icons.Settings className="w-6 h-6" /></button>
-                        <button onClick={handleLogout} className="p-2.5 rounded-full hover:bg-red-50 text-red-400" aria-label="Logout"><Icons.X className="w-6 h-6" /></button>
+                    <div className="flex gap-2">
+                        <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold">ZH/EN</button>
+                        <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10"><Icons.Settings className="w-5 h-5" /></button>
+                        <button onClick={handleLogout} className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400"><Icons.X className="w-5 h-5" /></button>
                     </div>
                 </div>
-            </nav>
 
-            <main className="max-w-3xl mx-auto px-4 pt-8">
-                <div className="flex gap-2 p-2 bg-white/50 backdrop-blur rounded-2xl border border-white/50 shadow-sm mb-6 w-fit mx-auto">
-                    {Object.values(THEMES).map(t => (
-                        <button key={t.id} onClick={() => setCurrentTheme(t.id)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${currentTheme === t.id ? 'bg-white shadow-md scale-110' : 'opacity-70 grayscale hover:grayscale-0'}`} aria-label={`Select ${t.name} theme`}>{t.emoji}</button>
-                    ))}
-                </div>
-
-                <div className="text-center space-y-8 mb-12 animate-fade-in">
-                    <div className="space-y-2">
-                        <h2 className={`text-4xl md:text-5xl font-black tracking-tight ${theme.accent}`}>Create Your <br/><span className={`bg-gradient-to-r ${theme.gradient} bg-clip-text text-transparent`}>Digital Vibe</span></h2>
-                        <p className="opacity-60 font-medium">{t('subtitle')}</p>
-                    </div>
-
-                    <div onClick={() => fileInputRef.current?.click()} className={`relative group cursor-pointer aspect-[4/3] md:aspect-[2/1] rounded-[2.5rem] border-4 border-dashed ${theme.border} bg-white/40 flex flex-col items-center justify-center overflow-hidden transition-all hover:bg-white/60`}>
-                        {sourceImage ? <img src={sourceImage} className="w-full h-full object-contain p-4" alt="Uploaded source" /> : <div className="space-y-4"><Icons.Camera className={`w-12 h-12 ${theme.accent} mx-auto`} /><p className="font-bold text-xl">{t('uploadTitle')}</p></div>}
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-                    </div>
-
-                    <div className="flex justify-center w-full">
-                        <div className="bg-white/40 p-1.5 rounded-2xl flex gap-1 border border-white/50 w-full max-w-sm">
-                            <button onClick={() => setGenerationMode('preset')} className={`flex-1 py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${generationMode === 'preset' ? 'bg-white shadow-md' : 'opacity-60'}`}><Icons.Magic className="w-4 h-4"/>{t('modePreset')}</button>
-                            <button onClick={() => setGenerationMode('custom')} className={`flex-1 py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${generationMode === 'custom' ? 'bg-white shadow-md' : 'opacity-60'}`}><Icons.PenTool className="w-4 h-4"/>{t('modeCustom')}</button>
+                {/* Upload Area */}
+                <div 
+                    onClick={() => fileInputRef.current?.click()} 
+                    className={`relative group cursor-pointer aspect-[3/2] rounded-2xl border border-dashed border-white/20 bg-white/5 flex flex-col items-center justify-center transition-all hover:bg-white/10 hover:border-yellow-500/50 overflow-hidden`}
+                >
+                    {sourceImage ? (
+                        <>
+                            <img src={sourceImage} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" alt="Source" />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="px-4 py-2 bg-black/60 backdrop-blur rounded-lg text-xs font-bold border border-white/10">{t('changePhoto')}</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="space-y-3 text-center">
+                            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto text-zinc-400 group-hover:text-yellow-400 transition-colors">
+                                <Icons.Camera className="w-6 h-6" />
+                            </div>
+                            <p className="font-medium text-zinc-400 text-sm">{t('uploadTitle')}</p>
                         </div>
-                    </div>
+                    )}
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                </div>
 
-                    {generationMode === 'custom' && (
-                        <div className="w-full max-w-xl mx-auto animate-pop text-left bg-white/40 p-4 rounded-3xl border border-white/60">
-                            <label className="block text-xs font-bold uppercase tracking-widest mb-2 ml-1 opacity-60">{t('promptLabel')}</label>
-                            <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} placeholder={t('customPlaceholder')} className="w-full bg-white/80 border-2 border-transparent focus:border-white rounded-xl px-4 py-4 focus:outline-none min-h-[100px] text-sm leading-relaxed resize-none shadow-inner"></textarea>
+                {/* Mode Selector */}
+                <div className="p-1 bg-white/5 rounded-xl flex gap-1 border border-white/5">
+                    <button onClick={() => setGenerationMode('preset')} className={`flex-1 py-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${generationMode === 'preset' ? 'bg-white/10 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}><Icons.Magic className="w-4 h-4"/>{t('modePreset')}</button>
+                    <button onClick={() => setGenerationMode('custom')} className={`flex-1 py-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${generationMode === 'custom' ? 'bg-white/10 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}><Icons.PenTool className="w-4 h-4"/>{t('modeCustom')}</button>
+                </div>
+
+                {generationMode === 'custom' && (
+                    <div className="animate-fade-in">
+                        <textarea 
+                            value={customPrompt} 
+                            onChange={(e) => setCustomPrompt(e.target.value)} 
+                            placeholder={t('customPlaceholder')} 
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 focus:outline-none focus:border-yellow-500/50 text-sm leading-relaxed resize-none h-32 placeholder-zinc-700"
+                        ></textarea>
+                    </div>
+                )}
+
+                {/* Generate Button */}
+                <button 
+                    onClick={handleGenerate} 
+                    disabled={isGlobalGenerating || !sourceImage} 
+                    className={`w-full py-4 rounded-xl font-bold text-black shadow-[0_0_20px_rgba(234,179,8,0.2)] bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 transform transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2`}
+                >
+                    {isGlobalGenerating ? (
+                        <><div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"/> {t('designing')}</>
+                    ) : (
+                        <>{t('makeMagic')}</>
+                    )}
+                </button>
+                
+                {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs text-center">{error}</div>}
+            </aside>
+
+            {/* --- Right Panel: Results Gallery --- */}
+            <main className="flex-1 p-6 md:p-12 overflow-y-auto min-h-screen">
+                <div ref={resultsRef} className="grid gap-8 grid-cols-1 lg:grid-cols-2 max-w-5xl mx-auto">
+                    {/* Placeholder State */}
+                    {results.length === 0 && !isGlobalGenerating && (
+                        <div className="col-span-full h-[60vh] flex flex-col items-center justify-center text-zinc-600 space-y-4 border-2 border-dashed border-white/5 rounded-3xl">
+                            <Icons.Magic className="w-12 h-12 opacity-20" />
+                            <p className="text-sm font-mono tracking-widest uppercase">Ready to Create</p>
                         </div>
                     )}
 
-                    <button onClick={handleGenerate} disabled={isGlobalGenerating || !sourceImage} className={`w-full py-5 rounded-3xl font-black text-xl text-white shadow-xl bg-gradient-to-r ${theme.gradient} transform transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed`}>
-                        {isGlobalGenerating ? t('designing') : t('makeMagic')}
-                    </button>
-                    {error && <p className="text-red-500 font-bold bg-white/80 p-2 rounded-xl inline-block shadow-sm">🚨 {error}</p>}
-                </div>
-
-                <div ref={resultsRef} className="grid gap-6 pb-12 grid-cols-1 md:grid-cols-2">
                     {results.map(item => (
-                        <div key={item.id} className={`${theme.cardBg} p-3 rounded-[2rem] shadow-xl animate-pop border border-white/60`}>
-                            <div className="flex items-center justify-between px-2 mb-3">
-                                <div className="flex items-center gap-2"><span className="text-xl">{item.emoji}</span><span className="font-bold text-lg">{item.title}</span></div>
+                        <div key={item.id} className={`glass-card rounded-3xl overflow-hidden p-2 group`}>
+                            <div className="flex items-center justify-between px-4 py-3">
+                                <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+                                    <span className="text-lg">{item.emoji}</span>
+                                    <span>{item.title}</span>
+                                </div>
+                                <div className="text-[10px] font-mono text-zinc-600 bg-black/20 px-2 py-1 rounded">
+                                    {model.includes('pro') ? 'PRO' : 'FAST'}
+                                </div>
                             </div>
-                            <div className={`relative aspect-[3/4] rounded-[1.5rem] overflow-hidden ${theme.secondary} pattern-grid`}>
-                                {item.status === 'loading' && <div className="absolute inset-0 flex items-center justify-center"><div className="w-10 h-10 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"/></div>}
-                                {item.status === 'success' && <img src={item.imageUrl} className="w-full h-full object-cover" alt={`Generated ${item.title}`} />}
-                                {item.status === 'error' && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-xs font-bold text-red-400">GENERATION FAILED</div>}
+                            <div className={`relative aspect-[3/4] rounded-2xl overflow-hidden bg-black/50`}>
+                                {item.status === 'loading' && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="space-y-4 text-center">
+                                            <div className="w-10 h-10 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto"/>
+                                            <p className="text-xs text-yellow-500 font-mono animate-pulse">{t('rendering')}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {item.status === 'success' && (
+                                    <div className="relative w-full h-full group-hover:scale-[1.02] transition-transform duration-500">
+                                        <img src={item.imageUrl} className="w-full h-full object-cover" alt={item.title} />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                                            <a href={item.imageUrl} download={`nano-banana-${item.title}.png`} className="w-full py-3 bg-white text-black text-xs font-bold rounded-lg text-center hover:bg-yellow-400 transition-colors">
+                                                {t('save')}
+                                            </a>
+                                        </div>
+                                    </div>
+                                )}
+                                {item.status === 'error' && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 space-y-2 p-4 text-center">
+                                        <Icons.X className="w-8 h-8" />
+                                        <span className="text-xs font-mono uppercase">{t('failed')}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
                 </div>
             </main>
 
+            {/* Settings Modal (Simplified for XML) */}
             {showSettings && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-md p-4 animate-fade-in">
-                    <div className="bg-white w-full max-w-md rounded-[2rem] p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6 animate-fade-in">
+                    <div className="glass-panel w-full max-w-md rounded-3xl p-6 space-y-6 relative">
                         <div className="flex justify-between items-center">
-                            <h3 className="font-bold text-lg">{t('settings')} ⚙️</h3>
-                            <button onClick={() => setShowSettings(false)} className="p-2 bg-stone-100 rounded-full"><Icons.X className="w-5 h-5"/></button>
+                            <h3 className="font-bold text-lg text-white">{t('settings')}</h3>
+                            <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-white/10 rounded-full"><Icons.X /></button>
                         </div>
                         
                         <div className="space-y-4">
-                            {/* Model Selection */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-stone-400 uppercase px-1">Selected Model</label>
-                                <select 
-                                    value={model} 
-                                    onChange={e => setModel(e.target.value)} 
-                                    className="w-full p-4 rounded-xl bg-stone-50 border-2 border-stone-100 font-bold focus:outline-none focus:border-yellow-400 transition-colors"
-                                >
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-zinc-500 uppercase">Model</label>
+                                <select value={model} onChange={e => setModel(e.target.value)} className="w-full p-3 rounded-xl bg-black/40 border border-white/10 text-sm focus:border-yellow-500/50 outline-none text-white">
                                     {MODEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                 </select>
                             </div>
-
-                            {/* Base URL */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-stone-400 uppercase px-1">Base URL</label>
-                                <input 
-                                    type="text"
-                                    value={baseUrl}
-                                    onChange={e => setBaseUrl(e.target.value)}
-                                    placeholder={t('baseUrlPlaceholder')}
-                                    className="w-full p-4 rounded-xl bg-stone-50 border-2 border-stone-100 font-medium text-sm focus:outline-none focus:border-yellow-400 transition-colors"
-                                />
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-zinc-500 uppercase">API Key</label>
+                                <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} className="w-full p-3 rounded-xl bg-black/40 border border-white/10 text-sm focus:border-yellow-500/50 outline-none text-white font-mono" />
                             </div>
-
-                            {/* API Key */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-stone-400 uppercase px-1">API Key</label>
-                                <input 
-                                    type="password"
-                                    value={apiKey}
-                                    onChange={e => setApiKey(e.target.value)}
-                                    placeholder={t('apiKeyPlaceholder')}
-                                    className="w-full p-4 rounded-xl bg-stone-50 border-2 border-stone-100 font-medium text-sm focus:outline-none focus:border-yellow-400 transition-colors"
-                                />
-                            </div>
-
-                            {/* Test Connection Button */}
-                            <button 
-                                onClick={handleTestConnection}
-                                disabled={isTesting}
-                                className="w-full py-3 rounded-xl font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 border-2 border-transparent hover:border-stone-300 transition-all active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                {isTesting ? (
-                                    <><div className="w-4 h-4 border-2 border-stone-600 border-t-transparent rounded-full animate-spin"/> {t('testing')}</>
-                                ) : (
-                                    <>{t('testConnection')}</>
-                                )}
+                            <button onClick={handleTestConnection} disabled={isTesting} className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-zinc-300 text-sm font-bold hover:bg-white/10">
+                                {isTesting ? 'Pinging...' : t('testConnection')}
                             </button>
-
-                            {/* Logs Area */}
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-stone-400 uppercase px-1">Connection Logs</label>
-                                <div className="w-full h-32 bg-stone-900 rounded-xl p-3 overflow-y-auto font-mono text-[10px] text-green-400 shadow-inner">
-                                    {testLogs.length === 0 && <span className="opacity-50 text-stone-500">No logs yet...</span>}
-                                    {testLogs.map((log, i) => (
-                                        <div key={i} className="mb-1 break-all">{log}</div>
-                                    ))}
+                            {testLogs.length > 0 && (
+                                <div className="h-32 bg-black rounded-lg p-3 overflow-y-auto font-mono text-[10px] text-green-400 border border-white/5">
+                                    {testLogs.map((log, i) => <div key={i}>{log}</div>)}
                                     <div ref={logsEndRef} />
                                 </div>
-                            </div>
+                            )}
                         </div>
-
-                        <button 
-                            onClick={handleSaveSettings} 
-                            className={`w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r ${theme.gradient} shadow-lg active:scale-95 mt-2`}
-                        >
-                            {t('saveChanges')}
-                        </button>
+                        <button onClick={handleSaveSettings} className="w-full py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-yellow-400 transition-colors">{t('saveChanges')}</button>
                     </div>
                 </div>
             )}
@@ -483,34 +450,22 @@ const App = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Immediate check: If config is invalid, stop loading immediately
         if (!isSupabaseConfigured) {
             setLoading(false);
             return;
         }
-
-        // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
-            setLoading(false); // Stop loading once we know the session state
-        }).catch(err => {
-            console.error("Session check failed", err);
             setLoading(false);
         });
-
-        // Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
-            setLoading(false); // Ensure loading is stopped when auth state settles
+            setLoading(false);
         });
-
         return () => subscription.unsubscribe();
     }, []);
 
-    // Priority Check: If config is missing, show warning immediately, don't wait for loading
     if (!isSupabaseConfigured) return <ConfigWarning />;
-    
-    // Normal loading state
     if (loading) return <LoadingScreen />;
 
     return (

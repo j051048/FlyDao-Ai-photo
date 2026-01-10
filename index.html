@@ -1,102 +1,138 @@
 
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>AI Photo Booth - Nano Banana Edition</title>
+    <meta name="theme-color" content="#09090b">
+    <title>Nano Banana Studio | AI Art & Design</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Quicksand', 'Noto Sans SC', 'sans-serif'],
+                        sans: ['Inter Tight', 'MiSans', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        display: ['Geist', 'Inter Tight', 'sans-serif'],
+                    },
+                    colors: {
+                        background: '#09090b', // Zinc 950
+                        surface: '#18181b',    // Zinc 900
+                        primary: '#EAB308',    // Yellow 500 (Banana)
+                        primaryGlow: '#FDE047', // Yellow 300
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 4s ease-in-out infinite alternate',
+                        'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        glow: {
+                            '0%': { opacity: '0.4', filter: 'blur(20px)' },
+                            '100%': { opacity: '0.8', filter: 'blur(30px)' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: 0 },
+                            '100%': { transform: 'translateY(0)', opacity: 1 },
+                        }
                     }
                 }
             }
         }
     </script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Fonts: Inter Tight for UI, Geist for Numbers/Display -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <style>
         body {
-            font-family: 'Quicksand', 'Noto Sans SC', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            transition: background-color 0.5s ease;
-            overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
-        }
-        
-        .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        .animate-pop { animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
+            font-family: 'Inter Tight', sans-serif;
+            background-color: #09090b;
+            color: #fafafa;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        .nano-glass {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 2px solid rgba(255, 255, 255, 0.8);
-        }
-
-        .pattern-grid {
-            background-image: radial-gradient(currentColor 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
-        
-        /* HTML Loading spinner (Removed by React once mounted) */
-        #root:empty {
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        /* 2026 核心材质：噪点背景 */
+        .bg-noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
             height: 100vh;
-            background-color: #FEF9C3;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
-        #root:empty::after {
-            content: "Loading Nano Banana OS...";
-            color: #78716c;
-            font-weight: bold;
-            font-family: sans-serif;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse { 50% { opacity: 0.5; } }
-    </style>
-<script>
-    // Global Error Trap: Catch script errors before React mounts
-    window.onerror = function(msg, url, line, col, error) {
-        var root = document.getElementById('root');
-        if (root && root.innerHTML === '') {
-            root.style.display = 'block';
-            root.style.backgroundColor = '#FFF1F2';
-            root.style.padding = '20px';
-            root.style.color = '#881337';
-            root.innerHTML = '<div style="max-width:400px;margin:50px auto;text-align:center;font-family:sans-serif;"><h1>⚠️ Startup Error</h1><p>'+msg+'</p><pre style="background:#fff;padding:10px;text-align:left;overflow:auto;border-radius:8px;font-size:10px;margin-top:20px;">'+(error && error.stack ? error.stack : '')+'</pre></div>';
-        }
-    };
 
-    // Shim process object for browser environments with injected credentials
-    window.process = { 
-        env: { 
-            API_KEY: "", 
-            NEXT_PUBLIC_SUPABASE_URL: "https://ogfzseepxjzqwqznfnik.supabase.co", 
-            NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_jvDntvuh9jGMZ_-wiO-ICw_AdVzmz_z",
-            // Add your Stripe Publishable Key here for local testing or ensure it's injected in prod
-            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_sample_key_replace_me" 
-        } 
-    };
-</script>
-<script type="importmap">
+        /* 环境光晕 */
+        .ambient-light {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(234, 179, 8, 0.15) 0%, rgba(9, 9, 11, 0) 70%);
+            top: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: -2;
+            pointer-events: none;
+            animation: glow 8s infinite alternate;
+        }
+
+        /* 进化版玻璃态 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .glass-card {
+            background: rgba(24, 24, 27, 0.6); /* Zinc 900 with opacity */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-card:hover {
+            border-color: rgba(234, 179, 8, 0.3);
+            background: rgba(24, 24, 27, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px -10px rgba(234, 179, 8, 0.15);
+        }
+
+        /* 隐藏滚动条但保留功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+
+    <script>
+        window.process = { 
+            env: { 
+                API_KEY: "", 
+                NEXT_PUBLIC_SUPABASE_URL: "https://ogfzseepxjzqwqznfnik.supabase.co", 
+                NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_jvDntvuh9jGMZ_-wiO-ICw_AdVzmz_z",
+                NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_sample_key_replace_me" 
+            } 
+        };
+    </script>
+    <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@19.0.0",
@@ -114,6 +150,8 @@
 </script>
 </head>
 <body>
+    <div class="bg-noise"></div>
+    <div class="ambient-light"></div>
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
 </body>

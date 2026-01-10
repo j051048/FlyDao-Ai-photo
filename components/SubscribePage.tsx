@@ -14,7 +14,7 @@ export const SubscribePage: React.FC<SubscribePageProps> = ({ user }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
-    const [lang, setLang] = useState<AppLanguage>('zh');
+    const [lang] = useState<AppLanguage>('zh'); // Inherit from context in real app
     
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS[lang][key];
 
@@ -23,64 +23,93 @@ export const SubscribePage: React.FC<SubscribePageProps> = ({ user }) => {
         setError('');
         try {
             await startSubscriptionCheckout();
-            // User will be redirected, so we might not reach here
         } catch (err: any) {
             console.error(err);
-            setError(err.message || 'Payment initialization failed');
+            setError(err.message || 'Initialization failed');
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#FEF9C3] p-4 flex items-center justify-center">
-            <div className="w-full max-w-lg animate-pop">
-                <div className="nano-glass rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden text-center">
+        <div className="min-h-screen flex items-center justify-center p-6 animate-fade-in relative z-10">
+            <div className="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-center">
+                
+                {/* Left Side: Value Prop */}
+                <div className="space-y-8 text-left">
+                    <button 
+                        onClick={() => navigate('/dashboard')} 
+                        className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium group"
+                    >
+                        <Icons.ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        {t('backToDash')}
+                    </button>
+
+                    <div className="space-y-4">
+                        <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-600 leading-tight pb-2">
+                            {t('subscribeTitle')}
+                        </h1>
+                        <p className="text-zinc-400 text-lg leading-relaxed max-w-md">
+                            {t('subscribeSubtitle')}
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        {[t('feature1'), t('feature2'), t('feature3'), t('feature4')].map((feat, i) => (
+                            <div key={i} className="flex items-center gap-4 group">
+                                <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-yellow-400 group-hover:bg-yellow-500/10 group-hover:border-yellow-500/50 transition-all">
+                                    <Icons.Check className="w-4 h-4" />
+                                </div>
+                                <span className="text-zinc-200 font-medium tracking-wide">{feat}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Right Side: Pricing Card */}
+                <div className="relative">
+                    {/* Glow Effect */}
+                    <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 to-amber-600 rounded-[2rem] blur opacity-20"></div>
                     
-                    {/* Header */}
-                    <div className="relative flex items-center mb-6">
-                        <button 
-                            onClick={() => navigate('/profile')} 
-                            className="p-2 rounded-full hover:bg-white/50 transition-colors text-stone-700"
-                        >
-                            <Icons.ArrowLeft className="w-6 h-6" />
-                        </button>
-                    </div>
-
-                    <div className="space-y-2 mb-8">
-                        <div className="w-20 h-20 bg-yellow-400 rounded-3xl flex items-center justify-center text-4xl mx-auto shadow-lg rotate-6 mb-4">🚀</div>
-                        <h1 className="text-3xl font-black text-stone-800 tracking-tight">{t('subscribeTitle')}</h1>
-                        <p className="text-stone-500 font-medium">{t('subscribeSubtitle')}</p>
-                    </div>
-
-                    {/* Pricing Card */}
-                    <div className="bg-white/60 rounded-3xl p-6 border-2 border-yellow-400/50 shadow-lg mb-8 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 bg-yellow-400 text-xs font-bold px-3 py-1 rounded-bl-xl text-stone-900">POPULAR</div>
-                        
-                        <div className="flex items-baseline justify-center gap-1 mb-6 mt-2">
-                            <span className="text-5xl font-black text-stone-800">$10</span>
-                            <span className="text-stone-500 font-bold">{t('perMonth')}</span>
+                    <div className="glass-panel rounded-[2rem] p-8 md:p-10 relative overflow-hidden flex flex-col gap-8">
+                        <div className="absolute top-0 right-0 bg-yellow-500/20 border-l border-b border-white/10 text-yellow-300 text-[10px] font-bold px-4 py-2 rounded-bl-2xl uppercase tracking-widest">
+                            Most Popular
                         </div>
 
-                        <ul className="space-y-4 text-left mb-8">
-                            {[t('feature1'), t('feature2'), t('feature3'), t('feature4')].map((feat, i) => (
-                                <li key={i} className="flex items-center gap-3">
-                                    <div className="w-6 h-6 rounded-full bg-green-400 text-white flex items-center justify-center flex-shrink-0">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="20 6 9 17 4 12"/></svg>
-                                    </div>
-                                    <span className="font-bold text-stone-700 text-sm">{feat}</span>
-                                </li>
-                            ))}
-                        </ul>
+                        <div className="space-y-1">
+                            <p className="text-zinc-400 text-sm font-bold uppercase tracking-widest">Pro Plan</p>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-5xl font-mono font-bold text-white">$10</span>
+                                <span className="text-zinc-500 font-medium">{t('perMonth')}</span>
+                            </div>
+                        </div>
+
+                        <div className="h-px w-full bg-white/10"></div>
 
                         <button 
                             onClick={handleSubscribe}
                             disabled={loading}
-                            className="w-full py-4 bg-stone-900 hover:bg-stone-800 text-white font-black rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                            className="w-full py-4 bg-white text-black font-bold rounded-xl shadow-lg shadow-white/10 hover:shadow-yellow-500/20 hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2 relative overflow-hidden group"
                         >
-                            {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : t('subscribeBtn')}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:animate-slide-up opacity-0 group-hover:opacity-100"></div>
+                            {loading ? (
+                                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> 
+                            ) : (
+                                <>
+                                    <span>{t('subscribeBtn')}</span>
+                                    <Icons.Diamond className="w-4 h-4" />
+                                </>
+                            )}
                         </button>
-                        
-                        {error && <p className="text-red-500 font-bold text-xs mt-4 bg-red-50 p-2 rounded-lg">{error}</p>}
+
+                        <p className="text-center text-zinc-600 text-xs">
+                            Secure payment via Stripe. Cancel anytime.
+                        </p>
+
+                        {error && (
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs text-center font-medium">
+                                {error}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -90,19 +119,19 @@ export const SubscribePage: React.FC<SubscribePageProps> = ({ user }) => {
 
 export const PaymentSuccessPage = () => {
     const navigate = useNavigate();
-    const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS['zh'][key]; // Default to ZH or use context
+    const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS['zh'][key];
 
     return (
-        <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-            <div className="text-center space-y-6 max-w-md animate-pop">
-                <div className="w-24 h-24 bg-green-400 rounded-full flex items-center justify-center mx-auto shadow-xl">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+            <div className="glass-panel p-10 rounded-3xl text-center space-y-6 max-w-md w-full animate-pop">
+                <div className="w-20 h-20 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto ring-1 ring-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+                    <Icons.Check className="w-10 h-10" />
                 </div>
-                <div>
-                    <h1 className="text-3xl font-black text-green-900">{t('paymentSuccessTitle')}</h1>
-                    <p className="text-green-700 font-medium mt-2">{t('paymentSuccessDesc')}</p>
+                <div className="space-y-2">
+                    <h1 className="text-2xl font-bold text-white">{t('paymentSuccessTitle')}</h1>
+                    <p className="text-zinc-400 text-sm leading-relaxed">{t('paymentSuccessDesc')}</p>
                 </div>
-                <button onClick={() => navigate('/dashboard')} className="px-8 py-3 bg-white text-green-900 font-bold rounded-xl shadow-lg border border-green-200">
+                <button onClick={() => navigate('/dashboard')} className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors">
                     {t('returnHome')}
                 </button>
             </div>
@@ -115,14 +144,14 @@ export const PaymentCancelPage = () => {
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS['zh'][key];
 
     return (
-        <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
-            <div className="text-center space-y-6 max-w-md animate-pop">
-                <div className="text-6xl">🤔</div>
-                <div>
-                    <h1 className="text-3xl font-black text-stone-800">{t('paymentCancelTitle')}</h1>
-                    <p className="text-stone-500 font-medium mt-2">{t('paymentCancelDesc')}</p>
+        <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+            <div className="glass-panel p-10 rounded-3xl text-center space-y-6 max-w-md w-full animate-pop">
+                <div className="text-5xl grayscale opacity-50">🤔</div>
+                <div className="space-y-2">
+                    <h1 className="text-2xl font-bold text-white">{t('paymentCancelTitle')}</h1>
+                    <p className="text-zinc-400 text-sm leading-relaxed">{t('paymentCancelDesc')}</p>
                 </div>
-                <button onClick={() => navigate('/subscribe')} className="px-8 py-3 bg-white text-stone-800 font-bold rounded-xl shadow-lg border border-stone-200">
+                <button onClick={() => navigate('/subscribe')} className="w-full py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors border border-white/10">
                     {t('tryAgain')}
                 </button>
             </div>

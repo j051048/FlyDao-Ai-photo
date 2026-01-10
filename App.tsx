@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Theme, ResultItem, AppLanguage, GenerationMode, HistoryItem } from './types';
 import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
-import { generateImageWithGemini } from './services/geminiService';
+import { generateImageWithGemini, testGeminiConnection } from './services/geminiService';
 import { addToHistory, getHistory, clearHistoryDB } from './services/historyService';
 import { ProfilePage } from './components/ProfilePage';
 import { SubscribePage, PaymentSuccessPage, PaymentCancelPage } from './components/SubscribePage';
@@ -270,7 +270,12 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     
     // Settings State
     const [model, setModel] = useState<string>(localStorage.getItem('api_model') || 'gemini-2.5-flash-image');
-    // Removed custom API key states
+    const [apiKey, setApiKey] = useState<string>(localStorage.getItem('custom_api_key') || '');
+    const [baseUrl, setBaseUrl] = useState<string>(localStorage.getItem('custom_base_url') || '');
+    
+    const [isTesting, setIsTesting] = useState(false);
+    const [testLogs, setTestLogs] = useState<string[]>([]);
+    const logsEndRef = useRef<HTMLDivElement>(null);
     
     // History & Edit State
     const [showHistory, setShowHistory] = useState<boolean>(false);
@@ -286,6 +291,13 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const theme = THEMES[currentTheme] || THEMES.banana;
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS[lang][key];
 
+    // Auto-scroll logs
+    useEffect(() => {
+        if (showSettings && logsEndRef.current) {
+            logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [testLogs, showSettings]);
+
     // Load history when modal opens
     useEffect(() => {
         if (showHistory) {
@@ -295,7 +307,23 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
 
     const handleSaveSettings = () => {
         localStorage.setItem('api_model', model);
+        localStorage.setItem('custom_base_url', baseUrl);
+        localStorage.setItem('custom_api_key', apiKey);
         setShowSettings(false);
+    };
+
+    const handleTestConnection = async () => {
+        setIsTesting(true);
+        setTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Pinging ${baseUrl || 'Official Google API'}...`]);
+        try {
+            const config = { baseUrl, apiKey };
+            const result = await testGeminiConnection(config, model);
+            setTestLogs(prev => [...prev, `✅ ${result}`]);
+        } catch (err: any) {
+            setTestLogs(prev => [...prev, `❌ ${err.message}`]);
+        } finally {
+            setIsTesting(false);
+        }
     };
 
     const handleLogout = async () => supabase.auth.signOut();
@@ -320,8 +348,9 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
         try {
             // If editing, we use the user's refine instruction. If generating, use the preset/custom prompt.
             const promptToUse = promptOverride || item.prompt;
+            const config = { baseUrl, apiKey }; // Pass custom config
             
-            const url = await generateImageWithGemini(promptToUse, source, model);
+            const url = await generateImageWithGemini(promptToUse, source, model, config);
             
             // Save to History (Fire and forget)
             addToHistory({
@@ -393,7 +422,9 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
         setEditingItem(null); // Close modal immediately
 
         try {
-            await generateImageWithGemini(editPrompt, imageSourceForEdit, model).then(url => {
+            // Also pass custom config during edit
+            const config = { baseUrl, apiKey };
+            await generateImageWithGemini(editPrompt, imageSourceForEdit, model, config).then(url => {
                  setResults(prev => prev.map(r => r.id === editingItem.id ? { ...r, status: 'success', imageUrl: url } : r));
                  addToHistory({
                     id: crypto.randomUUID(),
@@ -701,7 +732,7 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                 </div>
             )}
 
-            {/* Settings Modal (Simplified) */}
+            {/* Settings Modal (Updated) */}
             {showSettings && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6 animate-fade-in">
                     <div className="glass-panel w-full max-w-md rounded-3xl p-6 space-y-6 relative border border-border">
@@ -717,6 +748,47 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                                     {MODEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                 </select>
                             </div>
+                            
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-textMuted uppercase">Base URL (Optional)</label>
+                                <input 
+                                    type="text" 
+                                    value={baseUrl} 
+                                    onChange={e => setBaseUrl(e.target.value)} 
+                                    placeholder={t('baseUrlPlaceholder')} 
+                                    className="w-full p-3 rounded-xl bg-surfaceHighlight border border-border text-sm focus:border-yellow-500/50 outline-none text-textMain font-mono" 
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-textMuted uppercase">API Key (Optional)</label>
+                                <input 
+                                    type="password" 
+                                    value={apiKey} 
+                                    onChange={e => setApiKey(e.target.value)} 
+                                    placeholder={t('apiKeyPlaceholder')} 
+                                    className="w-full p-3 rounded-xl bg-surfaceHighlight border border-border text-sm focus:border-yellow-500/50 outline-none text-textMain font-mono" 
+                                />
+                            </div>
+
+                            <button 
+                                onClick={handleTestConnection} 
+                                disabled={isTesting} 
+                                className="w-full py-3 rounded-xl bg-surfaceHighlight border border-border text-textMuted text-sm font-bold hover:bg-surface flex items-center justify-center gap-2"
+                            >
+                                {isTesting ? (
+                                    <><div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> {t('testing')}</>
+                                ) : (
+                                    t('testConnection')
+                                )}
+                            </button>
+                            
+                            {testLogs.length > 0 && (
+                                <div className="h-32 bg-black/40 rounded-lg p-3 overflow-y-auto font-mono text-[10px] text-green-400 border border-border">
+                                    {testLogs.map((log, i) => <div key={i}>{log}</div>)}
+                                    <div ref={logsEndRef} />
+                                </div>
+                            )}
                         </div>
                         <button onClick={handleSaveSettings} className="w-full py-3 rounded-xl bg-textMain text-background font-bold text-sm hover:opacity-90 transition-opacity">{t('saveChanges')}</button>
                     </div>
@@ -736,15 +808,16 @@ const App = () => {
             return;
         }
 
+        // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setLoading(false);
         });
 
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
+            setLoading(false);
         });
 
         return () => subscription.unsubscribe();
@@ -759,19 +832,25 @@ const App = () => {
     }
 
     return (
-        <Routes>
-            <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/dashboard" />} />
-            <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/dashboard" />} />
-            
-            <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" />} />
-            <Route path="/profile" element={session ? <ProfilePage user={session.user} /> : <Navigate to="/login" />} />
-            <Route path="/subscribe" element={session ? <SubscribePage user={session.user} /> : <Navigate to="/login" />} />
-            
-            <Route path="/payment/success" element={<PaymentSuccessPage />} />
-            <Route path="/payment/cancel" element={<PaymentCancelPage />} />
-            
-            <Route path="*" element={<Navigate to={session ? "/dashboard" : "/login"} />} />
-        </Routes>
+        <div className="bg-background min-h-screen text-textMain font-sans selection:bg-yellow-500/30">
+            <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/dashboard" replace />} />
+                <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/dashboard" replace />} />
+                
+                {/* Protected Routes */}
+                <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" replace />} />
+                <Route path="/profile" element={session ? <ProfilePage user={session.user} /> : <Navigate to="/login" replace />} />
+                <Route path="/subscribe" element={session ? <SubscribePage user={session.user} /> : <Navigate to="/login" replace />} />
+                
+                <Route path="/payment/success" element={<PaymentSuccessPage />} />
+                <Route path="/payment/cancel" element={<PaymentCancelPage />} />
+
+                {/* Redirect root to dashboard (which handles auth check) or login */}
+                <Route path="/" element={<Navigate to={session ? "/dashboard" : "/login"} replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </div>
     );
 };
 

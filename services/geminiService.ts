@@ -1,97 +1,50 @@
-
 import { GoogleGenAI } from "@google/genai";
 
-interface GeminiConfig {
-    apiKey?: string;
-    baseUrl?: string;
-}
-
 /**
- * Generates an image using Gemini models via Google GenAI SDK.
- * Accepts optional configuration to override environment variables.
+ * Generates an image using Gemini models via @google/genai SDK.
  */
-export const generateImageWithGemini = async (prompt: string, imageBase64: string, model: string = 'gemini-2.5-flash-image', config?: GeminiConfig): Promise<string> => {
-    // Priority: Custom Config > Environment Variable
-    const apiKey = config?.apiKey || process.env.API_KEY;
-    
-    if (!apiKey) {
-        throw new Error("API Key is missing. Please check your settings.");
-    }
+export const generateImageWithGemini = async (prompt: string, imageBase64: string, model: string = 'gemini-2.5-flash-image'): Promise<string> => {
+    // API key must be from process.env.API_KEY
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    const clientOptions: any = { apiKey };
-    if (config?.baseUrl) {
-        clientOptions.baseUrl = config.baseUrl;
-    }
-
-    const ai = new GoogleGenAI(clientOptions);
-
-    // Clean Base64 string if it has prefix
-    const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+    // Prepare inputs
+    const base64Data = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+    // Simple mime type detection or default
+    const mimeMatch = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
 
     try {
         const response = await ai.models.generateContent({
             model: model,
             contents: {
                 parts: [
-                    { text: prompt },
+                    {
+                        text: prompt
+                    },
                     {
                         inlineData: {
-                            mimeType: "image/jpeg",
-                            data: cleanBase64
+                            mimeType: mimeType,
+                            data: base64Data
                         }
                     }
                 ]
             }
         });
 
-        // Parse Response to find Image
-        // Gemini 2.5/Pro models return image in inlineData
-        const parts = response.candidates?.[0]?.content?.parts || [];
-        for (const part of parts) {
-            if (part.inlineData) {
-                const mimeType = part.inlineData.mimeType || 'image/png';
-                return `data:${mimeType};base64,${part.inlineData.data}`;
+        // Find image part in response
+        if (response.candidates?.[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    const respMimeType = part.inlineData.mimeType || 'image/png';
+                    return `data:${respMimeType};base64,${part.inlineData.data}`;
+                }
             }
         }
+        
+        throw new Error("No image generated in response.");
 
-        throw new Error("No image generated. The model might have refused the request due to safety filters.");
     } catch (error: any) {
         console.error("Gemini API Error:", error);
         throw new Error(error.message || "Failed to generate image");
-    }
-};
-
-/**
- * Test the connection to the Gemini API with the provided configuration.
- */
-export const testGeminiConnection = async (config: GeminiConfig, model: string): Promise<string> => {
-    const apiKey = config.apiKey || process.env.API_KEY;
-    
-    if (!apiKey) {
-        throw new Error("Missing API Key");
-    }
-
-    const clientOptions: any = { apiKey };
-    if (config.baseUrl) {
-        clientOptions.baseUrl = config.baseUrl;
-    }
-
-    const ai = new GoogleGenAI(clientOptions);
-
-    try {
-        // Send a lightweight text-only request to check connectivity
-        // We use a simple text model or the same model if it supports text generation (which Gemini models do)
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: "Hello, reply with 'OK'.",
-        });
-
-        if (response.text) {
-            return `Success! Model replied: ${response.text.slice(0, 20)}...`;
-        } else {
-            return "Connected, but no text response received.";
-        }
-    } catch (error: any) {
-        throw new Error(`Connection failed: ${error.message}`);
     }
 };

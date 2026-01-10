@@ -19,15 +19,20 @@
                         display: ['Geist', 'Inter Tight', 'sans-serif'],
                     },
                     colors: {
-                        background: '#09090b', // Zinc 950
-                        surface: '#18181b',    // Zinc 900
-                        primary: '#EAB308',    // Yellow 500 (Banana)
-                        primaryGlow: '#FDE047', // Yellow 300
+                        background: 'var(--background)',
+                        surface: 'var(--surface)',
+                        surfaceHighlight: 'var(--surface-highlight)',
+                        textMain: 'var(--text-main)',
+                        textMuted: 'var(--text-muted)',
+                        border: 'var(--border)',
+                        primary: '#EAB308',
+                        primaryGlow: '#FDE047',
                     },
                     animation: {
                         'float': 'float 6s ease-in-out infinite',
                         'glow': 'glow 4s ease-in-out infinite alternate',
                         'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+                        'expand': 'expand 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                     },
                     keyframes: {
                         float: {
@@ -41,6 +46,10 @@
                         slideUp: {
                             '0%': { transform: 'translateY(20px)', opacity: 0 },
                             '100%': { transform: 'translateY(0)', opacity: 1 },
+                        },
+                        expand: {
+                            '0%': { width: '0', opacity: 0 },
+                            '100%': { width: 'auto', opacity: 1 },
                         }
                     }
                 }
@@ -48,21 +57,42 @@
         }
     </script>
     
-    <!-- Fonts: Inter Tight for UI, Geist for Numbers/Display -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Inter Tight', sans-serif;
-            background-color: #09090b;
-            color: #fafafa;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+        :root {
+            /* Light Mode (Frosted Paper) */
+            --background: #fafafa; /* Zinc 50 */
+            --surface: #ffffff;
+            --surface-highlight: #f4f4f5; /* Zinc 100 */
+            --text-main: #18181b; /* Zinc 900 */
+            --text-muted: #71717a; /* Zinc 500 */
+            --border: rgba(0, 0, 0, 0.08);
+            --noise-opacity: 0.05;
         }
 
-        /* 2026 核心材质：噪点背景 */
+        .dark {
+            /* Dark Mode (Luminous Void) */
+            --background: #09090b; /* Zinc 950 */
+            --surface: rgba(24, 24, 27, 0.6); /* Zinc 900 alpha */
+            --surface-highlight: rgba(39, 39, 42, 0.5); /* Zinc 800 alpha */
+            --text-main: #fafafa; /* Zinc 50 */
+            --text-muted: #a1a1aa; /* Zinc 400 */
+            --border: rgba(255, 255, 255, 0.08);
+            --noise-opacity: 0.03;
+        }
+
+        body {
+            font-family: 'Inter Tight', sans-serif;
+            background-color: var(--background);
+            color: var(--text-main);
+            transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+
         .bg-noise {
             position: fixed;
             top: 0;
@@ -71,11 +101,32 @@
             height: 100vh;
             pointer-events: none;
             z-index: -1;
-            opacity: 0.03;
+            opacity: var(--noise-opacity);
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
-        /* 环境光晕 */
+        .glass-panel {
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        .glass-card {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-card:hover {
+            border-color: rgba(234, 179, 8, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px -10px rgba(234, 179, 8, 0.15);
+        }
+
+        /* Ambient light adjustments for Light Mode */
         .ambient-light {
             position: fixed;
             width: 600px;
@@ -87,39 +138,17 @@
             z-index: -2;
             pointer-events: none;
             animation: glow 8s infinite alternate;
-        }
-
-        /* 进化版玻璃态 */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            mix-blend-mode: screen; /* Blend better in dark mode */
         }
         
-        .glass-card {
-            background: rgba(24, 24, 27, 0.6); /* Zinc 900 with opacity */
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .glass-card:hover {
-            border-color: rgba(234, 179, 8, 0.3);
-            background: rgba(24, 24, 27, 0.8);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px -10px rgba(234, 179, 8, 0.15);
+        html:not(.dark) .ambient-light {
+            opacity: 0.6;
+            mix-blend-mode: multiply; /* Darken in light mode */
+            background: radial-gradient(circle, rgba(234, 179, 8, 0.3) 0%, rgba(255, 255, 255, 0) 70%);
         }
 
-        /* 隐藏滚动条但保留功能 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 
     <script>

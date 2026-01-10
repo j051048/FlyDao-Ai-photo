@@ -26,4 +26,11 @@ export const Icons = {
     Diamond: (p: { className?: string }) => <Icon {...p} path={<><path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z"/></>} />,
     Check: (p: { className?: string }) => <Icon {...p} path={<><polyline points="20 6 9 17 4 12"/></>} />,
     Lock: (p: { className?: string }) => <Icon {...p} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />,
+    Google: (p: { className?: string }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={p.className}>
+            <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .533 5.333.533 12S5.867 24 12.48 24c3.44 0 6.373-1.133 8.573-3.293 2.253-2.253 2.947-5.413 2.947-8.133 0-.8-.053-1.48-.16-2.08H12.48z" fill="currentColor"/>
+        </svg>
+    ),
+    Moon: (p: { className?: string }) => <Icon {...p} path={<><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></>} />,
+    Sun: (p: { className?: string }) => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>} />,
 };

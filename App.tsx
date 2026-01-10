@@ -11,33 +11,77 @@ import { SubscribePage, PaymentSuccessPage, PaymentCancelPage } from './componen
 
 // --- Global UI Components ---
 
+const ThemeToggle = () => {
+    const [isDark, setIsDark] = useState(true);
+
+    useEffect(() => {
+        // Initial check
+        if (document.documentElement.classList.contains('dark')) {
+            setIsDark(true);
+        } else {
+            setIsDark(false);
+        }
+    }, []);
+
+    const toggleTheme = () => {
+        const newIsDark = !isDark;
+        setIsDark(newIsDark);
+        if (newIsDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    };
+
+    return (
+        <button 
+            onClick={toggleTheme} 
+            className="group flex items-center gap-2 px-3 py-2 rounded-xl bg-surfaceHighlight hover:bg-black/5 dark:hover:bg-white/10 border border-border transition-all overflow-hidden"
+            aria-label="Toggle Theme"
+        >
+            <div className="relative w-5 h-5 flex items-center justify-center">
+                <div className={`absolute transition-all duration-300 transform ${isDark ? 'rotate-0 opacity-100' : 'rotate-90 opacity-0 scale-50'}`}>
+                    <Icons.Moon className="w-4 h-4 text-textMuted group-hover:text-textMain" />
+                </div>
+                <div className={`absolute transition-all duration-300 transform ${!isDark ? 'rotate-0 opacity-100' : '-rotate-90 opacity-0 scale-50'}`}>
+                    <Icons.Sun className="w-4 h-4 text-yellow-500" />
+                </div>
+            </div>
+            {/* Telescopic text label that expands on hover or based on state logic if desired, keeping it minimal here but "telescopic" feel via width transition */}
+            <span className="w-0 overflow-hidden group-hover:w-auto group-hover:opacity-100 opacity-0 whitespace-nowrap text-[10px] font-bold text-textMuted transition-all duration-300 ease-out">
+                {isDark ? 'DARK' : 'LIGHT'}
+            </span>
+        </button>
+    );
+};
+
 const LoadingScreen = () => (
-    <div className="min-h-screen bg-[#09090b] flex items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-900/20 via-transparent to-transparent opacity-50"></div>
+    <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-500/10 via-transparent to-transparent opacity-50"></div>
         <div className="flex flex-col items-center gap-6 relative z-10">
-            <div className="w-16 h-16 border-2 border-white/10 border-t-yellow-500 rounded-full animate-spin" />
+            <div className="w-16 h-16 border-2 border-border border-t-yellow-500 rounded-full animate-spin" />
             <div className="flex flex-col items-center gap-1">
-                <p className="text-white font-mono font-bold tracking-[0.2em] text-xs">SYSTEM BOOT</p>
-                <p className="text-zinc-500 text-[10px] font-mono">Initializing Nano Banana OS...</p>
+                <p className="text-textMain font-mono font-bold tracking-[0.2em] text-xs">SYSTEM BOOT</p>
+                <p className="text-textMuted text-[10px] font-mono">Initializing Nano Banana OS...</p>
             </div>
         </div>
     </div>
 );
 
 const ConfigWarning = () => (
-    <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6 text-center">
+    <div className="min-h-screen bg-background flex items-center justify-center p-6 text-center">
         <div className="glass-panel p-8 rounded-2xl max-w-md w-full space-y-6 border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.1)]">
             <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500 text-2xl">⚡️</div>
             <div className="space-y-2">
-                <h1 className="text-xl font-bold text-white">Environment Error</h1>
-                <p className="text-zinc-400 text-sm">Application keys are missing.</p>
+                <h1 className="text-xl font-bold text-textMain">Environment Error</h1>
+                <p className="text-textMuted text-sm">Application keys are missing.</p>
             </div>
-            <div className="p-4 bg-black/40 rounded-lg text-left font-mono text-[10px] border border-white/5 text-zinc-500">
+            <div className="p-4 bg-surfaceHighlight rounded-lg text-left font-mono text-[10px] border border-border text-textMuted">
                 <p className="text-red-400 mb-2 font-bold">MISSING_VARS:</p>
                 NEXT_PUBLIC_SUPABASE_URL<br/>
                 NEXT_PUBLIC_SUPABASE_ANON_KEY
             </div>
-            <a href="https://supabase.com/dashboard" target="_blank" className="block w-full py-3 bg-white text-black font-bold rounded-lg text-sm hover:bg-zinc-200 transition-colors">
+            <a href="https://supabase.com/dashboard" target="_blank" className="block w-full py-3 bg-textMain text-background font-bold rounded-lg text-sm hover:opacity-80 transition-opacity">
                 Open Console
             </a>
         </div>
@@ -52,9 +96,9 @@ const AuthLayout = ({ children, title }: { children?: React.ReactNode, title: st
             <div className="w-full max-w-md animate-slide-up">
                 <div className="glass-panel rounded-3xl p-8 md:p-10 space-y-8">
                     <div className="text-center space-y-3">
-                        <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-[0_0_20px_rgba(234,179,8,0.4)] rotate-3">🍌</div>
-                        <h1 className="text-2xl font-bold text-white tracking-tight">{title}</h1>
-                        <p className="text-zinc-500 font-medium text-xs tracking-widest uppercase">Nano Banana Studio</p>
+                        <div className="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-[0_0_20px_rgba(234,179,8,0.4)] rotate-3 text-black">🍌</div>
+                        <h1 className="text-2xl font-bold text-textMain tracking-tight">{title}</h1>
+                        <p className="text-textMuted font-medium text-xs tracking-widest uppercase">Nano Banana Studio</p>
                     </div>
                     {children}
                 </div>
@@ -83,29 +127,63 @@ const LoginPage = () => {
         }
     };
 
+    const handleGoogleLogin = async () => {
+        try {
+            const redirectUrl = window.location.origin; 
+            const { error } = await supabase.auth.signInWithOAuth({ 
+                provider: 'google',
+                options: {
+                    redirectTo: redirectUrl,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    },
+                }
+            });
+            if (error) throw error;
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
     return (
         <AuthLayout title="Studio Login">
             <form onSubmit={handleEmailLogin} className="space-y-4">
                 <input 
                     type="email" placeholder="Email" required
-                    className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white placeholder-zinc-600 focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 focus:outline-none transition-all"
+                    className="w-full px-5 py-4 rounded-xl bg-surfaceHighlight border border-border text-textMain placeholder-textMuted focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 focus:outline-none transition-all"
                     value={email} onChange={e => setEmail(e.target.value)}
                 />
                 <input 
                     type="password" placeholder="Password" required
-                    className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white placeholder-zinc-600 focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 focus:outline-none transition-all"
+                    className="w-full px-5 py-4 rounded-xl bg-surfaceHighlight border border-border text-textMain placeholder-textMuted focus:border-yellow-500/50 focus:ring-1 focus:ring-yellow-500/50 focus:outline-none transition-all"
                     value={password} onChange={e => setPassword(e.target.value)}
                 />
                 <button 
                     disabled={loading}
-                    className="w-full py-4 bg-white text-black font-bold rounded-xl shadow-lg shadow-white/5 hover:bg-zinc-200 transition-all active:scale-95 flex justify-center items-center"
+                    className="w-full py-4 bg-textMain text-background font-bold rounded-xl shadow-lg hover:opacity-90 transition-all active:scale-95 flex justify-center items-center"
                 >
-                    {loading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : 'Enter Studio'}
+                    {loading ? <div className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" /> : 'Enter Studio'}
                 </button>
             </form>
+            
+            <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-border"></div>
+                <span className="flex-shrink mx-4 text-textMuted text-[10px] font-bold uppercase tracking-widest">Or Continue With</span>
+                <div className="flex-grow border-t border-border"></div>
+            </div>
+
+            <button 
+                onClick={handleGoogleLogin} 
+                className="w-full py-4 bg-surfaceHighlight border border-border hover:bg-black/5 dark:hover:bg-white/5 text-textMain font-bold rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 group"
+            >
+                <Icons.Google className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <span>Google Account</span>
+            </button>
+
             {error && <p className="text-red-400 text-xs text-center">{error}</p>}
-            <p className="text-center text-sm text-zinc-500">
-                New here? <Link to="/signup" className="text-white hover:underline decoration-yellow-500">Create Account</Link>
+            <p className="text-center text-sm text-textMuted">
+                New here? <Link to="/signup" className="text-textMain hover:underline decoration-yellow-500">Create Account</Link>
             </p>
         </AuthLayout>
     );
@@ -141,8 +219,8 @@ const SignupPage = () => {
         return (
             <AuthLayout title="Verify Email">
                 <div className="text-center space-y-4">
-                    <p className="text-zinc-300">Verification link sent to your inbox.</p>
-                    <Link to="/login" className="block w-full py-3 bg-white/10 border border-white/10 text-white font-bold rounded-xl hover:bg-white/20">Return to Login</Link>
+                    <p className="text-textMuted">Verification link sent to your inbox.</p>
+                    <Link to="/login" className="block w-full py-3 bg-surfaceHighlight border border-border text-textMain font-bold rounded-xl hover:bg-white/5">Return to Login</Link>
                 </div>
             </AuthLayout>
         );
@@ -153,24 +231,24 @@ const SignupPage = () => {
             <form onSubmit={handleSignup} className="space-y-4">
                 <input 
                     type="email" placeholder="Email" required
-                    className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white placeholder-zinc-600 focus:border-yellow-500/50 focus:outline-none transition-all"
+                    className="w-full px-5 py-4 rounded-xl bg-surfaceHighlight border border-border text-textMain placeholder-textMuted focus:border-yellow-500/50 focus:outline-none transition-all"
                     value={email} onChange={e => setEmail(e.target.value)}
                 />
                 <input 
                     type="password" placeholder="Password (min 6 chars)" required minLength={6}
-                    className="w-full px-5 py-4 rounded-xl bg-black/40 border border-white/10 text-white placeholder-zinc-600 focus:border-yellow-500/50 focus:outline-none transition-all"
+                    className="w-full px-5 py-4 rounded-xl bg-surfaceHighlight border border-border text-textMain placeholder-textMuted focus:border-yellow-500/50 focus:outline-none transition-all"
                     value={password} onChange={e => setPassword(e.target.value)}
                 />
                 <button 
                     disabled={loading}
-                    className="w-full py-4 bg-white text-black font-bold rounded-xl shadow-lg transition-all active:scale-95 flex justify-center items-center"
+                    className="w-full py-4 bg-textMain text-background font-bold rounded-xl shadow-lg transition-all active:scale-95 flex justify-center items-center"
                 >
-                    {loading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : 'Create ID'}
+                    {loading ? <div className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" /> : 'Create ID'}
                 </button>
             </form>
             {error && <p className="text-red-400 text-xs text-center">{error}</p>}
-            <p className="text-center text-sm text-zinc-500">
-                Have account? <Link to="/login" className="text-white hover:underline decoration-yellow-500">Login</Link>
+            <p className="text-center text-sm text-textMuted">
+                Have account? <Link to="/login" className="text-textMain hover:underline decoration-yellow-500">Login</Link>
             </p>
         </AuthLayout>
     );
@@ -278,53 +356,54 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     };
 
     return (
-        <div className={`min-h-screen text-zinc-100 flex flex-col md:flex-row relative z-10 overflow-hidden`}>
+        <div className={`min-h-screen text-textMain flex flex-col md:flex-row relative z-10 overflow-hidden`}>
             
             {/* --- Left Panel: Controls (Glass Sidebar on Desktop) --- */}
-            <aside className="w-full md:w-[480px] md:h-screen md:sticky md:top-0 p-6 flex flex-col gap-6 md:border-r border-white/5 bg-black/20 backdrop-blur-md overflow-y-auto no-scrollbar z-20">
+            <aside className="w-full md:w-[480px] md:h-screen md:sticky md:top-0 p-6 flex flex-col gap-6 md:border-r border-border bg-surfaceHighlight/50 backdrop-blur-md overflow-y-auto no-scrollbar z-20">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <Link to="/profile" className="flex items-center gap-3 group">
                         <div className="w-10 h-10 rounded-xl bg-yellow-500 flex items-center justify-center text-black text-xl shadow-[0_0_15px_rgba(234,179,8,0.3)] group-hover:scale-105 transition-transform">🍌</div>
                         <div>
                             <h1 className="font-bold text-lg leading-none tracking-tight">Nano Banana</h1>
-                            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">{user.email.split('@')[0]}</span>
+                            <span className="text-[10px] font-mono text-textMuted uppercase tracking-widest">{user.email.split('@')[0]}</span>
                         </div>
                     </Link>
                     <div className="flex gap-2">
-                        <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold">ZH/EN</button>
-                        <button onClick={() => setShowSettings(true)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10"><Icons.Settings className="w-5 h-5" /></button>
-                        <button onClick={handleLogout} className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400"><Icons.X className="w-5 h-5" /></button>
+                        <ThemeToggle />
+                        <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="p-2 rounded-xl bg-surfaceHighlight hover:bg-black/5 dark:hover:bg-white/10 border border-border text-[10px] font-bold">ZH/EN</button>
+                        <button onClick={() => setShowSettings(true)} className="p-2 rounded-xl bg-surfaceHighlight hover:bg-black/5 dark:hover:bg-white/10 border border-border"><Icons.Settings className="w-5 h-5" /></button>
+                        <button onClick={handleLogout} className="p-2 rounded-xl bg-red-500/10 border border-red-500/10 hover:bg-red-500/20 text-red-400"><Icons.X className="w-5 h-5" /></button>
                     </div>
                 </div>
 
                 {/* Upload Area */}
                 <div 
                     onClick={() => fileInputRef.current?.click()} 
-                    className={`relative group cursor-pointer aspect-[3/2] rounded-2xl border border-dashed border-white/20 bg-white/5 flex flex-col items-center justify-center transition-all hover:bg-white/10 hover:border-yellow-500/50 overflow-hidden`}
+                    className={`relative group cursor-pointer aspect-[3/2] rounded-2xl border border-dashed border-border bg-surfaceHighlight/50 flex flex-col items-center justify-center transition-all hover:bg-surfaceHighlight hover:border-yellow-500/50 overflow-hidden`}
                 >
                     {sourceImage ? (
                         <>
                             <img src={sourceImage} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" alt="Source" />
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="px-4 py-2 bg-black/60 backdrop-blur rounded-lg text-xs font-bold border border-white/10">{t('changePhoto')}</span>
+                                <span className="px-4 py-2 bg-black/60 text-white backdrop-blur rounded-lg text-xs font-bold border border-white/10">{t('changePhoto')}</span>
                             </div>
                         </>
                     ) : (
                         <div className="space-y-3 text-center">
-                            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto text-zinc-400 group-hover:text-yellow-400 transition-colors">
+                            <div className="w-12 h-12 rounded-full bg-surfaceHighlight flex items-center justify-center mx-auto text-textMuted group-hover:text-yellow-400 transition-colors">
                                 <Icons.Camera className="w-6 h-6" />
                             </div>
-                            <p className="font-medium text-zinc-400 text-sm">{t('uploadTitle')}</p>
+                            <p className="font-medium text-textMuted text-sm">{t('uploadTitle')}</p>
                         </div>
                     )}
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 </div>
 
                 {/* Mode Selector */}
-                <div className="p-1 bg-white/5 rounded-xl flex gap-1 border border-white/5">
-                    <button onClick={() => setGenerationMode('preset')} className={`flex-1 py-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${generationMode === 'preset' ? 'bg-white/10 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}><Icons.Magic className="w-4 h-4"/>{t('modePreset')}</button>
-                    <button onClick={() => setGenerationMode('custom')} className={`flex-1 py-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${generationMode === 'custom' ? 'bg-white/10 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}><Icons.PenTool className="w-4 h-4"/>{t('modeCustom')}</button>
+                <div className="p-1 bg-surfaceHighlight rounded-xl flex gap-1 border border-border">
+                    <button onClick={() => setGenerationMode('preset')} className={`flex-1 py-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${generationMode === 'preset' ? 'bg-surface shadow-md text-textMain' : 'text-textMuted hover:text-textMain'}`}><Icons.Magic className="w-4 h-4"/>{t('modePreset')}</button>
+                    <button onClick={() => setGenerationMode('custom')} className={`flex-1 py-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${generationMode === 'custom' ? 'bg-surface shadow-md text-textMain' : 'text-textMuted hover:text-textMain'}`}><Icons.PenTool className="w-4 h-4"/>{t('modeCustom')}</button>
                 </div>
 
                 {generationMode === 'custom' && (
@@ -333,7 +412,7 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                             value={customPrompt} 
                             onChange={(e) => setCustomPrompt(e.target.value)} 
                             placeholder={t('customPlaceholder')} 
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 focus:outline-none focus:border-yellow-500/50 text-sm leading-relaxed resize-none h-32 placeholder-zinc-700"
+                            className="w-full bg-surfaceHighlight/50 border border-border rounded-xl px-4 py-4 focus:outline-none focus:border-yellow-500/50 text-sm leading-relaxed resize-none h-32 placeholder-textMuted text-textMain"
                         ></textarea>
                     </div>
                 )}
@@ -359,7 +438,7 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                 <div ref={resultsRef} className="grid gap-8 grid-cols-1 lg:grid-cols-2 max-w-5xl mx-auto">
                     {/* Placeholder State */}
                     {results.length === 0 && !isGlobalGenerating && (
-                        <div className="col-span-full h-[60vh] flex flex-col items-center justify-center text-zinc-600 space-y-4 border-2 border-dashed border-white/5 rounded-3xl">
+                        <div className="col-span-full h-[60vh] flex flex-col items-center justify-center text-textMuted space-y-4 border-2 border-dashed border-border rounded-3xl">
                             <Icons.Magic className="w-12 h-12 opacity-20" />
                             <p className="text-sm font-mono tracking-widest uppercase">Ready to Create</p>
                         </div>
@@ -368,15 +447,15 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                     {results.map(item => (
                         <div key={item.id} className={`glass-card rounded-3xl overflow-hidden p-2 group`}>
                             <div className="flex items-center justify-between px-4 py-3">
-                                <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+                                <div className="flex items-center gap-2 text-sm font-medium text-textMain">
                                     <span className="text-lg">{item.emoji}</span>
                                     <span>{item.title}</span>
                                 </div>
-                                <div className="text-[10px] font-mono text-zinc-600 bg-black/20 px-2 py-1 rounded">
+                                <div className="text-[10px] font-mono text-textMuted bg-surfaceHighlight px-2 py-1 rounded">
                                     {model.includes('pro') ? 'PRO' : 'FAST'}
                                 </div>
                             </div>
-                            <div className={`relative aspect-[3/4] rounded-2xl overflow-hidden bg-black/50`}>
+                            <div className={`relative aspect-[3/4] rounded-2xl overflow-hidden bg-surfaceHighlight`}>
                                 {item.status === 'loading' && (
                                     <div className="absolute inset-0 flex items-center justify-center">
                                         <div className="space-y-4 text-center">
@@ -410,34 +489,34 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
             {/* Settings Modal (Simplified for XML) */}
             {showSettings && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6 animate-fade-in">
-                    <div className="glass-panel w-full max-w-md rounded-3xl p-6 space-y-6 relative">
+                    <div className="glass-panel w-full max-w-md rounded-3xl p-6 space-y-6 relative border border-border">
                         <div className="flex justify-between items-center">
-                            <h3 className="font-bold text-lg text-white">{t('settings')}</h3>
-                            <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-white/10 rounded-full"><Icons.X /></button>
+                            <h3 className="font-bold text-lg text-textMain">{t('settings')}</h3>
+                            <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-surfaceHighlight rounded-full text-textMain"><Icons.X /></button>
                         </div>
                         
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-zinc-500 uppercase">Model</label>
-                                <select value={model} onChange={e => setModel(e.target.value)} className="w-full p-3 rounded-xl bg-black/40 border border-white/10 text-sm focus:border-yellow-500/50 outline-none text-white">
+                                <label className="text-xs font-bold text-textMuted uppercase">Model</label>
+                                <select value={model} onChange={e => setModel(e.target.value)} className="w-full p-3 rounded-xl bg-surfaceHighlight border border-border text-sm focus:border-yellow-500/50 outline-none text-textMain">
                                     {MODEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-zinc-500 uppercase">API Key</label>
-                                <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} className="w-full p-3 rounded-xl bg-black/40 border border-white/10 text-sm focus:border-yellow-500/50 outline-none text-white font-mono" />
+                                <label className="text-xs font-bold text-textMuted uppercase">API Key</label>
+                                <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} className="w-full p-3 rounded-xl bg-surfaceHighlight border border-border text-sm focus:border-yellow-500/50 outline-none text-textMain font-mono" />
                             </div>
-                            <button onClick={handleTestConnection} disabled={isTesting} className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-zinc-300 text-sm font-bold hover:bg-white/10">
+                            <button onClick={handleTestConnection} disabled={isTesting} className="w-full py-3 rounded-xl bg-surfaceHighlight border border-border text-textMuted text-sm font-bold hover:bg-surface">
                                 {isTesting ? 'Pinging...' : t('testConnection')}
                             </button>
                             {testLogs.length > 0 && (
-                                <div className="h-32 bg-black rounded-lg p-3 overflow-y-auto font-mono text-[10px] text-green-400 border border-white/5">
+                                <div className="h-32 bg-surfaceHighlight rounded-lg p-3 overflow-y-auto font-mono text-[10px] text-green-400 border border-border">
                                     {testLogs.map((log, i) => <div key={i}>{log}</div>)}
                                     <div ref={logsEndRef} />
                                 </div>
                             )}
                         </div>
-                        <button onClick={handleSaveSettings} className="w-full py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-yellow-400 transition-colors">{t('saveChanges')}</button>
+                        <button onClick={handleSaveSettings} className="w-full py-3 rounded-xl bg-textMain text-background font-bold text-sm hover:opacity-90 transition-opacity">{t('saveChanges')}</button>
                     </div>
                 </div>
             )}

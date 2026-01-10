@@ -145,32 +145,31 @@ export const MODEL_OPTIONS = [
 ];
 
 export const THEMES: Record<string, Theme> = {
-    // Only one core theme needed for 2026, others can be subtle tints
+    // We use CSS variables (bg-background) for the main background to support dark/light mode
     banana: {
         id: 'banana',
         name: 'Void Amber',
         emoji: '🟡',
-        bg: 'bg-[#09090b]', // Zinc 950
+        bg: 'bg-background', 
         primary: 'bg-yellow-500', 
-        secondary: 'bg-zinc-900',
-        text: 'text-zinc-100',
+        secondary: 'bg-surface',
+        text: 'text-textMain',
         accent: 'text-yellow-400',
-        border: 'border-white/10',
+        border: 'border-border',
         gradient: 'from-yellow-400 to-amber-600',
         buttonShadow: 'shadow-yellow-500/20',
         cardBg: 'glass-card'
     },
-    // Keeping data structure for compatibility but re-styling
     berry: {
         id: 'berry',
         name: 'Void Crimson',
         emoji: '🔴',
-        bg: 'bg-[#09090b]',
+        bg: 'bg-background',
         primary: 'bg-rose-500',
-        secondary: 'bg-zinc-900',
-        text: 'text-zinc-100',
+        secondary: 'bg-surface',
+        text: 'text-textMain',
         accent: 'text-rose-400',
-        border: 'border-white/10',
+        border: 'border-border',
         gradient: 'from-rose-400 to-red-600',
         buttonShadow: 'shadow-rose-500/20',
         cardBg: 'glass-card'
@@ -179,12 +178,12 @@ export const THEMES: Record<string, Theme> = {
         id: 'mint',
         name: 'Void Emerald',
         emoji: '🟢',
-        bg: 'bg-[#09090b]',
+        bg: 'bg-background',
         primary: 'bg-emerald-500',
-        secondary: 'bg-zinc-900',
-        text: 'text-zinc-100',
+        secondary: 'bg-surface',
+        text: 'text-textMain',
         accent: 'text-emerald-400',
-        border: 'border-white/10',
+        border: 'border-border',
         gradient: 'from-emerald-400 to-teal-600',
         buttonShadow: 'shadow-emerald-500/20',
         cardBg: 'glass-card'
@@ -193,12 +192,12 @@ export const THEMES: Record<string, Theme> = {
         id: 'cyber',
         name: 'Void Violet',
         emoji: '🟣',
-        bg: 'bg-[#09090b]',
+        bg: 'bg-background',
         primary: 'bg-violet-500',
-        secondary: 'bg-zinc-900',
-        text: 'text-zinc-100',
+        secondary: 'bg-surface',
+        text: 'text-textMain',
         accent: 'text-violet-400',
-        border: 'border-white/10',
+        border: 'border-border',
         gradient: 'from-violet-400 to-purple-600',
         buttonShadow: 'shadow-violet-500/20',
         cardBg: 'glass-card'
@@ -213,16 +212,16 @@ export const STYLES: StyleItem[] = [
         prompt: "High fashion editorial photography, Vogue US cover style, creamy bokeh, rim lighting + soft fill, haute couture, exquisite makeup, 45-degree angle, sharp focus on eyes, rich textures, cinematic lighting, 8k resolution."
     },
     {
-        id: 'retro-anime',
-        title: '90s Anime',
-        emoji: '📼',
-        prompt: "90s anime aesthetic, cel shaded, lo-fi hip hop vibe, neon city background at night, slightly grainy, chromatic aberration, emotional atmosphere, detailed character design."
+        id: 'school',
+        title: 'High Teen',
+        emoji: '🏫',
+        prompt: "High teen fashion style, elite private school uniform, plaid skirt, golden hour sunlight, soft dreamy atmosphere, 90s retro vibe, Polaroid aesthetic. [IDENTITY CONSTRAINT]: Strictly maintain facial identity."
     },
     {
-        id: 'surreal',
-        title: 'Surreal Art',
-        emoji: '🔮',
-        prompt: "Surrealist portrait in the style of Dali meets Magritte, dreamlike atmosphere, floating elements, minimal composition, soft pastel colors, mysterious, thought-provoking, oil painting texture."
+        id: 'art-gallery',
+        title: 'Lost in Art',
+        emoji: '👾',
+        prompt: "人物独自站在空旷的欧洲古典美术馆（大理石地板、高耸穹顶、远处悬挂巨大文艺复兴油画），穿着黑色高领毛衣+宽松长裙或极简长风衣，侧身或回眸凝视一幅古典油画，自然窗光从侧后方洒下形成柔和伦勃朗光，氛围孤独、忧郁、文艺而高级，色调偏冷灰+微暖高光，像 Gregory Crewdson 与陈曼的混合体，极强电影感与故事感."
     },
     {
         id: 'corporate',

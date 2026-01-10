@@ -1,3 +1,4 @@
+
 import { Theme, StyleItem, Translation } from './types';
 
 // Updated for 2026 "Dark Mode" aesthetic
@@ -258,33 +259,33 @@ export const STYLES: StyleItem[] = [
         emoji: '💼',
         prompt: "Professional LinkedIn headshot, studio lighting, dark grey backdrop, sharp focus, confident expression, business attire, high quality DSLR photo, 85mm lens."
     },
-    // Male Styles (Optimized with User's specific prompts)
+    // Male Styles (Updated with the latest premium prompts)
     {
-        id: 'male-cinematic',
+        id: 'male-business-elite',
         gender: 'male',
-        title: '冷峻电影',
-        emoji: '🎬',
-        prompt: "hyper-realistic cinematic male portrait, exact face and facial features identical to reference image, preserve all original facial proportions skin texture pores freckles exact skin tone, sharp intense gaze directly at camera, powerful presence, subtle dramatic rembrandt lighting + strong side key light + rim light, moody teal-orange cinematic color grading, premium textured shirt slightly open, minimalist dark background, ultra detailed skin, photorealistic, 8k, shot on ARRI Alexa, professional color grading, hyper detailed --ar 2:3 --stylize 200 --q 2"
+        title: '高级商务精英',
+        emoji: '💼',
+        prompt: "realistic professional business portrait, exact face and features 100% identical to reference image, preserve original facial structure skin texture pores tone scars no changes, confident calm expression looking at camera, wearing sharp tailored navy/black suit with white dress shirt and subtle tie, neat hairstyle, modern office or clean urban background with soft natural window light, subtle rim light, clean and polished look, everyday professional vibe, photorealistic skin details, 8k high resolution, natural pose like linkedin headshot or company profile photo --ar 2:3 --stylize 100"
     },
     {
-        id: 'male-artistic',
+        id: 'male-street-casual',
         gender: 'male',
-        title: '文艺清冷',
-        emoji: '🍃',
-        prompt: "ultra clean japanese style artistic portrait, exact same face as reference photo 100% likeness, identical facial structure detailed skin pores natural texture exact skin tone, soft melancholic distant expression, slightly wet messy hair, delicate natural window soft light + subtle cool rim light, minimal beige-white background, film grain kodak portra 400 aesthetic, dreamy bokeh light leaks, extremely detailed realistic skin, photorealistic masterpiece, 8k --ar 3:4 --stylize 120"
+        title: '休闲街头松弛',
+        emoji: '🏙️',
+        prompt: "casual urban street style portrait, 100% identical to reference image face features proportions skin pores tone, relaxed confident look directly at camera, wearing premium casual outfit like unstructured blazer + knit polo/t-shirt + chinos or slim jeans, sneakers or loafers, city street or park background with natural golden hour or overcast light, effortless cool vibe, realistic fabric folds shadows, everyday modern city guy aesthetic, photorealistic 8k high detail, like instagram lifestyle shot --ar 3:4 --stylize 90"
     },
     {
-        id: 'male-dark',
+        id: 'male-minimal-elite',
         gender: 'male',
-        title: '暗黑力量',
-        emoji: '🦇',
-        prompt: "dramatic high-fashion dark moody male portrait, 100% preserve reference image exact face identity facial features proportions skin details pores scars exact skin tone no alteration, intense piercing gaze, strong jawline emphasis, chiaroscuro lighting with deep shadows + sharp rim light, black fitted shirt or leather jacket showing collarbone, industrial dark smoke background, powerful cinematic atmosphere, hyper realistic skin texture sweat subtle details, vogue editorial style, 8k ultra sharp --ar 4:5 --stylize 80 --q 2"
+        title: '极简工作室',
+        emoji: '🏢',
+        prompt: "photorealistic full body studio portrait in minimal clean style, exact face body proportions skin texture pores tone scars 100% identical to reference image no changes preserve original identity, confident relaxed modern expression looking at camera, wearing sharp slim-fit black or charcoal suit with white open-collar shirt no tie or premium unstructured blazer over knit polo, slim trousers, polished leather loafers or sneakers, neutral pure white or light gray seamless studio background, soft even studio lighting with subtle rim light, hands in pockets or natural relaxed pose standing centered, effortless sophisticated urban elite vibe, realistic fabric details wrinkles shadows, high-end lifestyle magazine editorial feel, photorealistic 8k ultra detailed natural pose everyday premium guy aesthetic --ar 2:3 --stylize 80"
     },
     {
-        id: 'male-mature',
+        id: 'male-warm-mature',
         gender: 'male',
-        title: '熟男魅力',
-        emoji: '☕',
-        prompt: "warm natural lifestyle premium portrait photography, exact facial identity from reference image 100% accurate, identical facial features proportions natural skin texture pores wrinkles exact skin tone, gentle confident warm expression with subtle smile, soft golden hour natural window light + gentle fill light, cozy wooden coffee tone background, cashmere sweater or elegant casual blazer, kodak portra 800 film aesthetic, leica soft bokeh, emotional depth, photorealistic ultra detailed 8k, elegant sophisticated --ar 2:3 --stylize 150"
+        title: '温暖高级熟男',
+        emoji: '🧣',
+        prompt: "photorealistic full body winter urban portrait, 100% preserve reference image exact face identity body proportions skin details pores natural tone no alteration, gentle confident warm expression subtle smile, layered stylish outfit: long camel/charcoal wool coat over textured knit sweater or turtleneck, slim black/charcoal trousers, brown leather boots, optional scarf, city street or park with soft overcast/natural window light, relaxed standing pose hands in pockets or adjusting coat, cozy sophisticated vibe, detailed fabric texture wool knit leather, realistic shadows folds, everyday premium lifestyle magazine feel, kodak portra style warm tones, hyper detailed 8k, natural candid moment --ar 2:3 --stylize 90"
     }
 ];

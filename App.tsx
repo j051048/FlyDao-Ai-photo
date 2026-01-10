@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
-import { Theme, ResultItem, AppLanguage, GenerationMode } from './types';
+import { Theme, ResultItem, AppLanguage, GenerationMode, HistoryItem } from './types';
 import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
 import { generateImageWithGemini } from './services/geminiService';
+import { addToHistory, getHistory, clearHistoryDB } from './services/historyService';
 import { ProfilePage } from './components/ProfilePage';
 import { SubscribePage, PaymentSuccessPage, PaymentCancelPage } from './components/SubscribePage';
 
@@ -266,7 +268,9 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const [error, setError] = useState<string>('');
     const [showSettings, setShowSettings] = useState<boolean>(false);
     
-    // Edit Mode State
+    // History & Edit State
+    const [showHistory, setShowHistory] = useState<boolean>(false);
+    const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
     const [editingItem, setEditingItem] = useState<ResultItem | null>(null);
     const [editPrompt, setEditPrompt] = useState('');
     const [isEditing, setIsEditing] = useState(false);
@@ -279,6 +283,13 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     
     const theme = THEMES[currentTheme] || THEMES.banana;
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS[lang][key];
+
+    // Load history when modal opens
+    useEffect(() => {
+        if (showHistory) {
+            getHistory().then(setHistoryItems);
+        }
+    }, [showHistory]);
 
     const handleSaveSettings = () => {
         localStorage.setItem('api_model', model);
@@ -310,6 +321,16 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
             
             const url = await generateImageWithGemini(promptToUse, source, model);
             
+            // Save to History (Fire and forget)
+            addToHistory({
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+                imageUrl: url,
+                prompt: promptToUse,
+                styleTitle: item.title,
+                emoji: item.emoji
+            });
+
             setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'success', imageUrl: url } : r));
         } catch (e: any) {
             console.error(e);
@@ -376,6 +397,13 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
         }
     };
 
+    const handleClearHistory = async () => {
+        if (window.confirm('Clear all history? This cannot be undone.')) {
+            await clearHistoryDB();
+            setHistoryItems([]);
+        }
+    };
+
     return (
         <div className={`min-h-screen text-textMain flex flex-col md:flex-row relative z-10 overflow-hidden`}>
             
@@ -391,10 +419,17 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                         </div>
                     </Link>
                     <div className="flex gap-2">
+                        <button 
+                            onClick={() => setShowHistory(true)} 
+                            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 transition-colors"
+                            title={t('history')}
+                        >
+                            <Icons.Clock className="w-5 h-5" />
+                        </button>
                         <ThemeToggle />
                         <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} className="p-2 rounded-xl bg-surfaceHighlight hover:bg-black/5 dark:hover:bg-white/10 border border-border text-[10px] font-bold">ZH/EN</button>
                         <button onClick={() => setShowSettings(true)} className="p-2 rounded-xl bg-surfaceHighlight hover:bg-black/5 dark:hover:bg-white/10 border border-border"><Icons.Settings className="w-5 h-5" /></button>
-                        <button onClick={handleLogout} className="p-2 rounded-xl bg-red-500/10 border border-red-500/10 hover:bg-red-500/20 text-red-400"><Icons.X className="w-5 h-5" /></button>
+                        <button onClick={handleLogout} className="p-2 rounded-xl bg-surfaceHighlight border border-border hover:bg-black/10 dark:hover:bg-white/10"><Icons.X className="w-5 h-5" /></button>
                     </div>
                 </div>
 
@@ -546,6 +581,56 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                 </div>
             </main>
 
+            {/* History Modal */}
+            {showHistory && (
+                <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50 backdrop-blur-sm animate-fade-in">
+                    <div className="w-full max-w-md h-full glass-panel border-l border-border flex flex-col animate-slide-left">
+                        <div className="p-6 border-b border-border flex justify-between items-center bg-surfaceHighlight/30">
+                            <h2 className="text-lg font-bold text-textMain flex items-center gap-2">
+                                <Icons.Clock className="w-5 h-5" />
+                                {t('history')}
+                            </h2>
+                            <div className="flex gap-2">
+                                {historyItems.length > 0 && (
+                                    <button onClick={handleClearHistory} className="p-2 hover:bg-red-500/10 hover:text-red-400 rounded-lg text-textMuted transition-colors" title={t('clearHistory')}>
+                                        <Icons.Trash className="w-4 h-4" />
+                                    </button>
+                                )}
+                                <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-surfaceHighlight rounded-lg text-textMain"><Icons.X /></button>
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {historyItems.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-textMuted space-y-4 opacity-50">
+                                    <Icons.Clock className="w-12 h-12" />
+                                    <p className="text-sm">{t('historyEmpty')}</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-4">
+                                    {historyItems.map(item => (
+                                        <div key={item.id} className="group relative aspect-[3/4] rounded-xl overflow-hidden bg-surfaceHighlight border border-border">
+                                            <img src={item.imageUrl} className="w-full h-full object-cover" loading="lazy" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                                                <div className="text-xs text-white font-bold truncate">{item.styleTitle}</div>
+                                                <div className="text-[10px] text-zinc-400 truncate">{new Date(item.timestamp).toLocaleDateString()}</div>
+                                                <a 
+                                                    href={item.imageUrl} 
+                                                    download={`history-${item.id}.png`}
+                                                    className="mt-2 w-full py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur rounded text-center text-[10px] font-bold text-white transition-colors"
+                                                >
+                                                    {t('save')}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Edit Modal */}
             {editingItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
@@ -629,20 +714,20 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
 const App = () => {
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [configError, setConfigError] = useState(false);
 
     useEffect(() => {
         if (!isSupabaseConfigured) {
+            setConfigError(true);
             setLoading(false);
             return;
         }
 
-        // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setLoading(false);
         });
 
-        // Listen for auth changes
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -652,23 +737,25 @@ const App = () => {
         return () => subscription.unsubscribe();
     }, []);
 
-    if (!isSupabaseConfigured) return <ConfigWarning />;
-    if (loading) return <LoadingScreen />;
+    if (configError) {
+        return <ConfigWarning />;
+    }
+
+    if (loading) {
+        return <LoadingScreen />;
+    }
 
     return (
         <Routes>
-            <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/dashboard" />} />
-            <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/dashboard" />} />
-            
-            <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" />} />
-            <Route path="/profile" element={session ? <ProfilePage user={session.user} /> : <Navigate to="/login" />} />
-            
-            <Route path="/subscribe" element={session ? <SubscribePage user={session.user} /> : <Navigate to="/login" />} />
+            <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" replace />} />
+            <Route path="/profile" element={session ? <ProfilePage user={session.user} /> : <Navigate to="/login" replace />} />
+            <Route path="/subscribe" element={session ? <SubscribePage user={session.user} /> : <Navigate to="/login" replace />} />
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
             <Route path="/payment/cancel" element={<PaymentCancelPage />} />
-
-            <Route path="/" element={<Navigate to={session ? "/dashboard" : "/login"} />} />
-            <Route path="*" element={<Navigate to="/" />} />
+            <Route path="/" element={<Navigate to={session ? "/dashboard" : "/login"} replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
 };

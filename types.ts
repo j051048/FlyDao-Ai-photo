@@ -26,6 +26,15 @@ export interface ResultItem extends StyleItem {
     imageUrl?: string;
 }
 
+export interface HistoryItem {
+    id: string;
+    timestamp: number;
+    imageUrl: string;
+    prompt: string;
+    styleTitle: string;
+    emoji: string;
+}
+
 export interface Config {
     provider: 'official' | 'thirdparty';
     baseUrl: string;
@@ -119,4 +128,8 @@ export interface Translation {
     editPlaceholder: string;
     applyEdit: string;
     cancel: string;
+    // History
+    history: string;
+    historyEmpty: string;
+    clearHistory: string;
 }

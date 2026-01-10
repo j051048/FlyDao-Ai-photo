@@ -76,6 +76,10 @@ export const TRANSLATIONS: Record<string, Translation> = {
         editPlaceholder: "例如：把头发改成银色，增加一些赛博朋克霓虹光...",
         applyEdit: "执行修改",
         cancel: "取消",
+        // History
+        history: "创作足迹",
+        historyEmpty: "暂无历史记录，开始创作吧！",
+        clearHistory: "清空记录",
     },
     en: {
         appTitle: "Nano Banana",
@@ -150,6 +154,10 @@ export const TRANSLATIONS: Record<string, Translation> = {
         editPlaceholder: "E.g., Change hair color to silver, add cyberpunk neon lights...",
         applyEdit: "Apply Changes",
         cancel: "Cancel",
+        // History
+        history: "History",
+        historyEmpty: "No history yet. Start creating!",
+        clearHistory: "Clear All",
     }
 };
 

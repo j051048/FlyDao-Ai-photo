@@ -1,11 +1,29 @@
+
 import { GoogleGenAI } from "@google/genai";
+
+interface GeminiConfig {
+    apiKey?: string;
+    baseUrl?: string;
+}
 
 /**
  * Generates an image using Gemini models via Google GenAI SDK.
+ * Accepts optional configuration to override environment variables.
  */
-export const generateImageWithGemini = async (prompt: string, imageBase64: string, model: string = 'gemini-2.5-flash-image'): Promise<string> => {
-    // API key must be from process.env.API_KEY
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+export const generateImageWithGemini = async (prompt: string, imageBase64: string, model: string = 'gemini-2.5-flash-image', config?: GeminiConfig): Promise<string> => {
+    // Priority: Custom Config > Environment Variable
+    const apiKey = config?.apiKey || process.env.API_KEY;
+    
+    if (!apiKey) {
+        throw new Error("API Key is missing. Please check your settings.");
+    }
+
+    const clientOptions: any = { apiKey };
+    if (config?.baseUrl) {
+        clientOptions.baseUrl = config.baseUrl;
+    }
+
+    const ai = new GoogleGenAI(clientOptions);
 
     // Clean Base64 string if it has prefix
     const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
@@ -44,8 +62,36 @@ export const generateImageWithGemini = async (prompt: string, imageBase64: strin
 };
 
 /**
- * Stub for test connection - functionality removed as we rely on SDK and env var.
+ * Test the connection to the Gemini API with the provided configuration.
  */
-export const testGeminiConnection = async (_config: any, _model: string): Promise<string> => {
-    return "Connection check is managed by the environment configuration.";
+export const testGeminiConnection = async (config: GeminiConfig, model: string): Promise<string> => {
+    const apiKey = config.apiKey || process.env.API_KEY;
+    
+    if (!apiKey) {
+        throw new Error("Missing API Key");
+    }
+
+    const clientOptions: any = { apiKey };
+    if (config.baseUrl) {
+        clientOptions.baseUrl = config.baseUrl;
+    }
+
+    const ai = new GoogleGenAI(clientOptions);
+
+    try {
+        // Send a lightweight text-only request to check connectivity
+        // We use a simple text model or the same model if it supports text generation (which Gemini models do)
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: "Hello, reply with 'OK'.",
+        });
+
+        if (response.text) {
+            return `Success! Model replied: ${response.text.slice(0, 20)}...`;
+        } else {
+            return "Connected, but no text response received.";
+        }
+    } catch (error: any) {
+        throw new Error(`Connection failed: ${error.message}`);
+    }
 };

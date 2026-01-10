@@ -1,4 +1,3 @@
-
 export interface Theme {
     id: string;
     name: string;
@@ -19,6 +18,7 @@ export interface StyleItem {
     title: string;
     emoji: string;
     prompt: string;
+    gender?: 'female' | 'male';
 }
 
 export interface ResultItem extends StyleItem {
@@ -54,6 +54,7 @@ export interface Profile {
 
 export type AppLanguage = 'zh' | 'en';
 export type GenerationMode = 'preset' | 'custom';
+export type Gender = 'female' | 'male';
 
 export interface Translation {
     appTitle: string;
@@ -78,6 +79,8 @@ export interface Translation {
     baseUrlPlaceholder: string;
     modePreset: string;
     modeCustom: string;
+    genderFemale: string;
+    genderMale: string;
     customPlaceholder: string;
     customTitle: string;
     promptLabel: string;

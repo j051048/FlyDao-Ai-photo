@@ -1,4 +1,3 @@
-
 import { Theme, StyleItem, Translation } from './types';
 
 // Updated for 2026 "Dark Mode" aesthetic
@@ -25,7 +24,9 @@ export const TRANSLATIONS: Record<string, Translation> = {
         googleKeyPlaceholder: "AIza...",
         baseUrlPlaceholder: "https://api...",
         modePreset: "大师风格",
-        modeCustom: "自定义 Prompt",
+        modeCustom: "自定义",
+        genderFemale: "女生模式",
+        genderMale: "男生模式",
         customPlaceholder: "描述你构想的视觉风格...",
         customTitle: "自定义",
         promptLabel: "Prompt",
@@ -104,6 +105,8 @@ export const TRANSLATIONS: Record<string, Translation> = {
         baseUrlPlaceholder: "https://api...",
         modePreset: "Presets",
         modeCustom: "Custom",
+        genderFemale: "Female",
+        genderMale: "Male",
         customPlaceholder: "Describe your visual concept...",
         customTitle: "Custom",
         promptLabel: "Prompt",
@@ -167,7 +170,6 @@ export const MODEL_OPTIONS = [
 ];
 
 export const THEMES: Record<string, Theme> = {
-    // We use CSS variables (bg-background) for the main background to support dark/light mode
     banana: {
         id: 'banana',
         name: 'Void Amber',
@@ -227,28 +229,62 @@ export const THEMES: Record<string, Theme> = {
 };
 
 export const STYLES: StyleItem[] = [
+    // Female Styles
     {
         id: 'editorial',
+        gender: 'female',
         title: 'Editorial',
         emoji: '📸',
         prompt: "High fashion editorial photography, Vogue US cover style, creamy bokeh, rim lighting + soft fill, haute couture, exquisite makeup, 45-degree angle, sharp focus on eyes, rich textures, cinematic lighting, 8k resolution."
     },
     {
         id: 'school',
+        gender: 'female',
         title: 'High Teen',
         emoji: '🏫',
         prompt: "High teen fashion style, elite private school uniform, plaid skirt, golden hour sunlight, soft dreamy atmosphere, 90s retro vibe, Polaroid aesthetic. [IDENTITY CONSTRAINT]: Strictly maintain facial identity."
     },
     {
         id: 'art-gallery',
+        gender: 'female',
         title: 'Lost in Art',
         emoji: '👾',
         prompt: "人物独自站在空旷的欧洲古典美术馆（大理石地板、高耸穹顶、远处悬挂巨大文艺复兴油画），穿着黑色高领毛衣+宽松长裙或极简长风衣，侧身或回眸凝视一幅古典油画，自然窗光从侧后方洒下形成柔和伦勃朗光，氛围孤独、忧郁、文艺而高级，色调偏冷灰+微暖高光，像 Gregory Crewdson 与陈曼的混合体，极强电影感与故事感."
     },
     {
         id: 'corporate',
+        gender: 'female',
         title: 'Headshot',
         emoji: '💼',
         prompt: "Professional LinkedIn headshot, studio lighting, dark grey backdrop, sharp focus, confident expression, business attire, high quality DSLR photo, 85mm lens."
+    },
+    // Male Styles
+    {
+        id: 'male-cinematic',
+        gender: 'male',
+        title: '冷峻电影',
+        emoji: '🎬',
+        prompt: "极致电影艺术人像摄影，帅气亚洲/欧美混血成熟男性，28-42岁，锐利深邃眼神，直视镜头，极强的存在感与压迫感，完美五官，高级冷峻气场，极致精致皮肤纹理，微皱的亚麻衬衫+高级西装外套，单色极简背景，极致电影光影，强烈明暗对比，Rembrandt光+侧逆光+边缘高光，8k超现实质感，超细腻皮肤毛孔，电影级色调分级，teal&orange调色，极致电影构图，professional color grading, shot on ARRI Alexa 65, cinematic masterpiece, ultra detailed, hyper realistic --ar 2:3"
+    },
+    {
+        id: 'male-artistic',
+        gender: 'male',
+        title: '文艺清冷',
+        emoji: '🍃',
+        prompt: "日系极致文艺艺术人像，20-26岁清冷帅气亚洲男生，干净透明的眼神，带一点疏离与忧郁，完美侧脸线条，微湿碎发，刘海微微遮眼，极简白色/米色衬衫，柔和自然窗边光+冷调辅光，极致干净皮肤，细腻毛孔与绒毛，ins风日系胶片质感，轻薄薄雾氛围，极致氛围感，minimalism background，浅灰/米白墙面，soft film grain，Kodak Portra 400风格，梦幻电影光晕，超高细节，8k，masterpiece, best quality, ultra detailed skin, cinematic lighting --ar 3:4"
+    },
+    {
+        id: 'male-dark',
+        gender: 'male',
+        title: '暗黑力量',
+        emoji: '🦇',
+        prompt: "暗黑系时尚艺术人像摄影，28-38岁肌肉线条分明硬朗型男，黑白高对比极致光影，强烈轮廓光+深邃阴影，凌厉眼神，带侵略性，完美下颌线与喉结，黑色高领/皮衣/敞开衬衫，展现锁骨与胸肌线条，工业风/黑暗工作室背景，烟雾缭绕，极致写实皮肤纹理+汗珠细节，超现实时尚大片质感，Dramatic chiaroscuro lighting，Vogue男人版封面风格，8k hyper detailed, ultra sharp focus, moody cinematic atmosphere, fashion editorial photography --ar 4:5"
+    },
+    {
+        id: 'male-mature',
+        gender: 'male',
+        title: '熟男魅力',
+        emoji: '☕',
+        prompt: "温暖高级自然光人像摄影，35-48岁成熟魅力男性，温暖有故事的眼神，带笑意与从容，完美熟男气质，精致胡茬或干净短须，高级休闲西装/羊绒毛衣+围巾，柔和金色小时光+温暖窗边自然光，极致真实皮肤质感，细腻毛孔与自然皱纹，高级生活方式杂志封面感，温暖木质/咖啡色调背景，电影级柔焦与光斑，温暖胶片感，Kodak Portra 800 + Leica APO Summicron风格，超现实细节，8k masterpiece, photorealistic, emotional depth, elegant sophisticated man --ar 2:3"
     }
 ];

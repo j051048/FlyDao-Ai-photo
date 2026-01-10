@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
-import { Theme, ResultItem, AppLanguage, GenerationMode, HistoryItem } from './types';
+import { Theme, ResultItem, AppLanguage, GenerationMode, HistoryItem, Gender } from './types';
 import { THEMES, STYLES, TRANSLATIONS, MODEL_OPTIONS } from './constants';
 import { Icons } from './components/Icons';
 import { generateImageWithGemini, testGeminiConnection } from './services/geminiService';
@@ -16,7 +15,6 @@ const ThemeToggle = () => {
     const [isDark, setIsDark] = useState(true);
 
     useEffect(() => {
-        // Initial check
         if (document.documentElement.classList.contains('dark')) {
             setIsDark(true);
         } else {
@@ -44,11 +42,10 @@ const ThemeToggle = () => {
                 <div className={`absolute transition-all duration-300 transform ${isDark ? 'rotate-0 opacity-100' : 'rotate-90 opacity-0 scale-50'}`}>
                     <Icons.Moon className="w-4 h-4 text-textMuted group-hover:text-textMain" />
                 </div>
-                <div className={`absolute transition-all duration-300 transform ${!isDark ? 'rotate-0 opacity-100' : '-rotate-90 opacity-0 scale-50'}`}>
+                <div className={`absolute transition-all duration-300 transform ${!isDark ? 'rotate-0 opacity-100' : 'rotate-90 opacity-0 scale-50'}`}>
                     <Icons.Sun className="w-4 h-4 text-yellow-500" />
                 </div>
             </div>
-            {/* Telescopic text label that expands on hover or based on state logic if desired, keeping it minimal here but "telescopic" feel via width transition */}
             <span className="w-0 overflow-hidden group-hover:w-auto group-hover:opacity-100 opacity-0 whitespace-nowrap text-[10px] font-bold text-textMuted transition-all duration-300 ease-out">
                 {isDark ? 'DARK' : 'LIGHT'}
             </span>
@@ -261,6 +258,7 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const [currentTheme, setCurrentTheme] = useState<string>('banana');
     const [lang, setLang] = useState<AppLanguage>('zh');
     const [generationMode, setGenerationMode] = useState<GenerationMode>('preset');
+    const [gender, setGender] = useState<Gender>('female');
     const [sourceImage, setSourceImage] = useState<string | null>(null);
     const [customPrompt, setCustomPrompt] = useState<string>('');
     const [isGlobalGenerating, setIsGlobalGenerating] = useState<boolean>(false);
@@ -268,7 +266,6 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const [error, setError] = useState<string>('');
     const [showSettings, setShowSettings] = useState<boolean>(false);
     
-    // Settings State
     const [model, setModel] = useState<string>(localStorage.getItem('api_model') || 'gemini-2.5-flash-image');
     const [apiKey, setApiKey] = useState<string>(localStorage.getItem('custom_api_key') || '');
     const [baseUrl, setBaseUrl] = useState<string>(localStorage.getItem('custom_base_url') || '');
@@ -277,7 +274,6 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const [testLogs, setTestLogs] = useState<string[]>([]);
     const logsEndRef = useRef<HTMLDivElement>(null);
     
-    // History & Edit State
     const [showHistory, setShowHistory] = useState<boolean>(false);
     const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
     const [editingItem, setEditingItem] = useState<ResultItem | null>(null);
@@ -291,14 +287,12 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     const theme = THEMES[currentTheme] || THEMES.banana;
     const t = (key: keyof typeof TRANSLATIONS.en) => TRANSLATIONS[lang][key];
 
-    // Auto-scroll logs
     useEffect(() => {
         if (showSettings && logsEndRef.current) {
             logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [testLogs, showSettings]);
 
-    // Load history when modal opens
     useEffect(() => {
         if (showHistory) {
             getHistory().then(setHistoryItems);
@@ -346,13 +340,11 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
 
     const runGeneration = async (item: ResultItem, source: string, promptOverride?: string) => {
         try {
-            // If editing, we use the user's refine instruction. If generating, use the preset/custom prompt.
             const promptToUse = promptOverride || item.prompt;
-            const config = { baseUrl, apiKey }; // Pass custom config
+            const config = { baseUrl, apiKey };
             
             const url = await generateImageWithGemini(promptToUse, source, model, config);
             
-            // Save to History (Fire and forget)
             addToHistory({
                 id: crypto.randomUUID(),
                 timestamp: Date.now(),
@@ -375,13 +367,13 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
         setIsGlobalGenerating(true);
         setError('');
         
+        const filteredStyles = STYLES.filter(s => s.gender === gender);
         const itemsToGen: ResultItem[] = generationMode === 'custom' 
             ? [{ id: 'custom-'+Date.now(), title: t('customTitle'), emoji: '🎨', prompt: customPrompt, status: 'loading' }]
-            : STYLES.map(s => ({ ...s, status: 'loading' as const }));
+            : filteredStyles.map(s => ({ ...s, status: 'loading' as const }));
         
         setResults(itemsToGen);
         
-        // Mobile scroll to results
         if (window.innerWidth < 768) {
             setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
@@ -390,39 +382,25 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
         setIsGlobalGenerating(false);
     };
 
-    // Retry a failed item using the ORIGINAL source image
     const handleRetry = async (item: ResultItem) => {
-        if (!sourceImage) return; // Should allow retry if source exists
-        
-        // Reset item to loading
+        if (!sourceImage) return;
         setResults(prev => prev.map(r => r.id === item.id ? { ...r, status: 'loading' } : r));
-        
-        // Re-run with original params
         await runGeneration(item, sourceImage);
     };
 
-    // Open Edit Modal
     const handleOpenEdit = (item: ResultItem) => {
         setEditingItem(item);
         setEditPrompt('');
     };
 
-    // Submit Edit
     const handleSubmitEdit = async () => {
         if (!editingItem || !editingItem.imageUrl || !editPrompt) return;
-        
         setIsEditing(true);
-        
-        // Use the GENERATED image as the source for the refinement
-        // NOTE: The imageUrl is a Data URL, so it's ready to pass to our service
         const imageSourceForEdit = editingItem.imageUrl;
-
-        // Update UI to show loading on that specific card
         setResults(prev => prev.map(r => r.id === editingItem.id ? { ...r, status: 'loading' } : r));
-        setEditingItem(null); // Close modal immediately
+        setEditingItem(null);
 
         try {
-            // Also pass custom config during edit
             const config = { baseUrl, apiKey };
             await generateImageWithGemini(editPrompt, imageSourceForEdit, model, config).then(url => {
                  setResults(prev => prev.map(r => r.id === editingItem.id ? { ...r, status: 'success', imageUrl: url } : r));
@@ -453,9 +431,7 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
     return (
         <div className={`min-h-screen text-textMain flex flex-col md:flex-row relative z-10 overflow-hidden`}>
             
-            {/* --- Left Panel: Controls (Glass Sidebar on Desktop) --- */}
             <aside className="w-full md:w-[480px] md:h-screen md:sticky md:top-0 p-6 flex flex-col gap-6 md:border-r border-border bg-surfaceHighlight/50 backdrop-blur-md overflow-y-auto no-scrollbar z-20">
-                {/* Header */}
                 <div className="flex items-center justify-between">
                     <Link to="/profile" className="flex items-center gap-3 group">
                         <div className="w-10 h-10 rounded-xl bg-yellow-500 flex items-center justify-center text-black text-xl shadow-[0_0_15px_rgba(234,179,8,0.3)] group-hover:scale-105 transition-transform">🍌</div>
@@ -479,7 +455,6 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                     </div>
                 </div>
 
-                {/* Upload Area */}
                 <div 
                     onClick={() => fileInputRef.current?.click()} 
                     className={`relative group cursor-pointer aspect-[3/2] rounded-2xl border border-dashed border-border bg-surfaceHighlight/50 flex flex-col items-center justify-center transition-all hover:bg-surfaceHighlight hover:border-yellow-500/50 overflow-hidden`}
@@ -502,11 +477,28 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 </div>
 
-                {/* Mode Selector */}
                 <div className="p-1 bg-surfaceHighlight rounded-xl flex gap-1 border border-border">
                     <button onClick={() => setGenerationMode('preset')} className={`flex-1 py-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${generationMode === 'preset' ? 'bg-surface shadow-md text-textMain' : 'text-textMuted hover:text-textMain'}`}><Icons.Magic className="w-4 h-4"/>{t('modePreset')}</button>
                     <button onClick={() => setGenerationMode('custom')} className={`flex-1 py-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${generationMode === 'custom' ? 'bg-surface shadow-md text-textMain' : 'text-textMuted hover:text-textMain'}`}><Icons.PenTool className="w-4 h-4"/>{t('modeCustom')}</button>
                 </div>
+
+                {/* Gender Switcher (Added in the "red box" location) */}
+                {generationMode === 'preset' && (
+                    <div className="p-1 bg-surfaceHighlight/50 rounded-xl flex gap-1 border border-border/50 animate-slide-up">
+                        <button 
+                            onClick={() => setGender('female')} 
+                            className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg flex items-center justify-center gap-2 transition-all ${gender === 'female' ? 'bg-white/10 shadow-sm text-pink-400' : 'text-textMuted hover:text-textMain'}`}
+                        >
+                            <span>👩</span> {t('genderFemale')}
+                        </button>
+                        <button 
+                            onClick={() => setGender('male')} 
+                            className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg flex items-center justify-center gap-2 transition-all ${gender === 'male' ? 'bg-white/10 shadow-sm text-blue-400' : 'text-textMuted hover:text-textMain'}`}
+                        >
+                            <span>👨</span> {t('genderMale')}
+                        </button>
+                    </div>
+                )}
 
                 {generationMode === 'custom' && (
                     <div className="animate-fade-in">
@@ -519,7 +511,6 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                     </div>
                 )}
 
-                {/* Generate Button */}
                 <button 
                     onClick={handleGenerate} 
                     disabled={isGlobalGenerating || !sourceImage} 
@@ -535,14 +526,12 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                 {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs text-center">{error}</div>}
             </aside>
 
-            {/* --- Right Panel: Results Gallery --- */}
             <main className="flex-1 p-6 md:p-12 overflow-y-auto min-h-screen">
                 <div ref={resultsRef} className="grid gap-8 grid-cols-1 lg:grid-cols-2 max-w-5xl mx-auto">
-                    {/* Placeholder State */}
                     {results.length === 0 && !isGlobalGenerating && (
                         <div className="col-span-full h-[60vh] flex flex-col items-center justify-center text-textMuted space-y-4 border-2 border-dashed border-border rounded-3xl">
                             <Icons.Magic className="w-12 h-12 opacity-20" />
-                            <p className="text-sm font-mono tracking-widest uppercase">Ready to Create</p>
+                            <p className="text-sm font-mono tracking-widest uppercase">READY TO CREATE</p>
                         </div>
                     )}
 
@@ -570,10 +559,7 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                                     <div className="relative w-full h-full">
                                         <img src={item.imageUrl} className="w-full h-full object-cover" alt={item.title} />
                                         
-                                        {/* Actions Overlay */}
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6 gap-3">
-                                            
-                                            {/* Action Bar */}
                                             <div className="flex items-center gap-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                                                  <button 
                                                     onClick={() => handleRetry(item)} 
@@ -627,7 +613,6 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                 </div>
             </main>
 
-            {/* History Modal */}
             {showHistory && (
                 <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50 backdrop-blur-sm animate-fade-in">
                     <div className="w-full max-w-md h-full glass-panel border-l border-border flex flex-col animate-slide-left">
@@ -677,7 +662,6 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                 </div>
             )}
 
-            {/* Edit Modal */}
             {editingItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="glass-panel w-full max-w-lg rounded-3xl p-6 space-y-6 relative border border-border shadow-2xl animate-pop">
@@ -732,7 +716,6 @@ const AIPhotoStudio = ({ user }: { user: any }) => {
                 </div>
             )}
 
-            {/* Settings Modal (Updated) */}
             {showSettings && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6 animate-fade-in">
                     <div className="glass-panel w-full max-w-md rounded-3xl p-6 space-y-6 relative border border-border">
@@ -808,13 +791,11 @@ const App = () => {
             return;
         }
 
-        // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setLoading(false);
         });
 
-        // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
             setLoading(false);
@@ -834,11 +815,9 @@ const App = () => {
     return (
         <div className="bg-background min-h-screen text-textMain font-sans selection:bg-yellow-500/30">
             <Routes>
-                {/* Public Routes */}
                 <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/dashboard" replace />} />
                 <Route path="/signup" element={!session ? <SignupPage /> : <Navigate to="/dashboard" replace />} />
                 
-                {/* Protected Routes */}
                 <Route path="/dashboard" element={session ? <AIPhotoStudio user={session.user} /> : <Navigate to="/login" replace />} />
                 <Route path="/profile" element={session ? <ProfilePage user={session.user} /> : <Navigate to="/login" replace />} />
                 <Route path="/subscribe" element={session ? <SubscribePage user={session.user} /> : <Navigate to="/login" replace />} />
@@ -846,7 +825,6 @@ const App = () => {
                 <Route path="/payment/success" element={<PaymentSuccessPage />} />
                 <Route path="/payment/cancel" element={<PaymentCancelPage />} />
 
-                {/* Redirect root to dashboard (which handles auth check) or login */}
                 <Route path="/" element={<Navigate to={session ? "/dashboard" : "/login"} replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

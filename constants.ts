@@ -258,33 +258,33 @@ export const STYLES: StyleItem[] = [
         emoji: '💼',
         prompt: "Professional LinkedIn headshot, studio lighting, dark grey backdrop, sharp focus, confident expression, business attire, high quality DSLR photo, 85mm lens."
     },
-    // Male Styles
+    // Male Styles (Optimized with User's specific prompts)
     {
         id: 'male-cinematic',
         gender: 'male',
         title: '冷峻电影',
         emoji: '🎬',
-        prompt: "极致电影艺术人像摄影，帅气亚洲/欧美混血成熟男性，28-42岁，锐利深邃眼神，直视镜头，极强的存在感与压迫感，完美五官，高级冷峻气场，极致精致皮肤纹理，微皱的亚麻衬衫+高级西装外套，单色极简背景，极致电影光影，强烈明暗对比，Rembrandt光+侧逆光+边缘高光，8k超现实质感，超细腻皮肤毛孔，电影级色调分级，teal&orange调色，极致电影构图，professional color grading, shot on ARRI Alexa 65, cinematic masterpiece, ultra detailed, hyper realistic --ar 2:3"
+        prompt: "hyper-realistic cinematic male portrait, exact face and facial features identical to reference image, preserve all original facial proportions skin texture pores freckles exact skin tone, sharp intense gaze directly at camera, powerful presence, subtle dramatic rembrandt lighting + strong side key light + rim light, moody teal-orange cinematic color grading, premium textured shirt slightly open, minimalist dark background, ultra detailed skin, photorealistic, 8k, shot on ARRI Alexa, professional color grading, hyper detailed --ar 2:3 --stylize 200 --q 2"
     },
     {
         id: 'male-artistic',
         gender: 'male',
         title: '文艺清冷',
         emoji: '🍃',
-        prompt: "日系极致文艺艺术人像，20-26岁清冷帅气亚洲男生，干净透明的眼神，带一点疏离与忧郁，完美侧脸线条，微湿碎发，刘海微微遮眼，极简白色/米色衬衫，柔和自然窗边光+冷调辅光，极致干净皮肤，细腻毛孔与绒毛，ins风日系胶片质感，轻薄薄雾氛围，极致氛围感，minimalism background，浅灰/米白墙面，soft film grain，Kodak Portra 400风格，梦幻电影光晕，超高细节，8k，masterpiece, best quality, ultra detailed skin, cinematic lighting --ar 3:4"
+        prompt: "ultra clean japanese style artistic portrait, exact same face as reference photo 100% likeness, identical facial structure detailed skin pores natural texture exact skin tone, soft melancholic distant expression, slightly wet messy hair, delicate natural window soft light + subtle cool rim light, minimal beige-white background, film grain kodak portra 400 aesthetic, dreamy bokeh light leaks, extremely detailed realistic skin, photorealistic masterpiece, 8k --ar 3:4 --stylize 120"
     },
     {
         id: 'male-dark',
         gender: 'male',
         title: '暗黑力量',
         emoji: '🦇',
-        prompt: "暗黑系时尚艺术人像摄影，28-38岁肌肉线条分明硬朗型男，黑白高对比极致光影，强烈轮廓光+深邃阴影，凌厉眼神，带侵略性，完美下颌线与喉结，黑色高领/皮衣/敞开衬衫，展现锁骨与胸肌线条，工业风/黑暗工作室背景，烟雾缭绕，极致写实皮肤纹理+汗珠细节，超现实时尚大片质感，Dramatic chiaroscuro lighting，Vogue男人版封面风格，8k hyper detailed, ultra sharp focus, moody cinematic atmosphere, fashion editorial photography --ar 4:5"
+        prompt: "dramatic high-fashion dark moody male portrait, 100% preserve reference image exact face identity facial features proportions skin details pores scars exact skin tone no alteration, intense piercing gaze, strong jawline emphasis, chiaroscuro lighting with deep shadows + sharp rim light, black fitted shirt or leather jacket showing collarbone, industrial dark smoke background, powerful cinematic atmosphere, hyper realistic skin texture sweat subtle details, vogue editorial style, 8k ultra sharp --ar 4:5 --stylize 80 --q 2"
     },
     {
         id: 'male-mature',
         gender: 'male',
         title: '熟男魅力',
         emoji: '☕',
-        prompt: "温暖高级自然光人像摄影，35-48岁成熟魅力男性，温暖有故事的眼神，带笑意与从容，完美熟男气质，精致胡茬或干净短须，高级休闲西装/羊绒毛衣+围巾，柔和金色小时光+温暖窗边自然光，极致真实皮肤质感，细腻毛孔与自然皱纹，高级生活方式杂志封面感，温暖木质/咖啡色调背景，电影级柔焦与光斑，温暖胶片感，Kodak Portra 800 + Leica APO Summicron风格，超现实细节，8k masterpiece, photorealistic, emotional depth, elegant sophisticated man --ar 2:3"
+        prompt: "warm natural lifestyle premium portrait photography, exact facial identity from reference image 100% accurate, identical facial features proportions natural skin texture pores wrinkles exact skin tone, gentle confident warm expression with subtle smile, soft golden hour natural window light + gentle fill light, cozy wooden coffee tone background, cashmere sweater or elegant casual blazer, kodak portra 800 film aesthetic, leica soft bokeh, emotional depth, photorealistic ultra detailed 8k, elegant sophisticated --ar 2:3 --stylize 150"
     }
 ];
